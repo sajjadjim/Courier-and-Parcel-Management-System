@@ -29,6 +29,8 @@ import PendingDelivary from "../Pages/Dashboard/Rider Elements/Pending Delivary/
 import CompletedDelivery from "../Pages/Dashboard/Rider Elements/CompletedDelivary/CompletedDelivery";
 import MyEarning from "../Pages/Dashboard/Rider Elements/My Earning/MyEarning";
 import DashboardHome from "../Pages/Dashboard/DashboardHome/DashboardHome";
+import ProfileUpdate from "../Pages/Dashboard/user/ProfileUpdate";
+
 
 
 
@@ -141,6 +143,10 @@ const router = createBrowserRouter([
       {
         path:'my-earnings',
         element:<RiderRoute><MyEarning></MyEarning></RiderRoute>
+      },
+      {
+        path:'update-profile',
+        element:<PrivateRoute><ProfileUpdate></ProfileUpdate></PrivateRoute>
       }
     ]
   }

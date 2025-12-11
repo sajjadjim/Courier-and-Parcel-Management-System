@@ -1,25 +1,24 @@
-// import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { FaIdCard, FaCarAlt, FaFileAlt, FaReceipt } from "react-icons/fa";
-import { useLoaderData } from "react-router";
-import React, { use, useEffect, useState } from "react";
+import { FaIdCard, FaCarAlt, FaFileAlt, FaReceipt, FaMotorcycle, FaBoxOpen, FaUtensils } from "react-icons/fa";
+import { useLoaderData, useNavigate } from "react-router";
 import Swal from "sweetalert2";
 import { AuthContext } from "../../../Context/AuthContext";
 import UseAxiosSecure from "../../../Hooks/UseAxiosSecure";
+import { useContext } from "react"; // Standard hook
 
 const RiderForm = () => {
     useEffect(() => {
-        document.title = "Rider Form";
+        document.title = "Apply as Rider | PickOn";
     }, []);
-    // dynamic data loading 
+
     const data = useLoaderData();
-    // State for region and city
     const [selectedRegion, setSelectedRegion] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
-    const { user } = use(AuthContext);
-    const axiosSecure = UseAxiosSecure()
+    const { user } = useContext(AuthContext); // Standard useContext
+    const axiosSecure = UseAxiosSecure();
+    const navigate = useNavigate();
 
-    // console.log("user", user);
     const {
         register,
         handleSubmit,
@@ -27,252 +26,200 @@ const RiderForm = () => {
         setValue
     } = useForm();
 
-    const onSubmit = async (data) => {
-        // console.log(data);
+    const onSubmit = async (formData) => {
         const riderInformation = {
-            ...data,
+            ...formData,
             createTime: new Date().toISOString(),
             status: "pending",
+        };
+
+        try {
+            const response = await axiosSecure.post('/riders', riderInformation);
+            if (response.data.insertedId) {
+                Swal.fire({
+                    title: "Application Submitted!",
+                    text: "We have received your application. Our team will contact you soon.",
+                    icon: "success",
+                    confirmButtonText: "Return to Home",
+                    confirmButtonColor: "#2563EB"
+                }).then(() => {
+                    navigate("/");
+                });
+            }
+        } catch (error) {
+            Swal.fire("Error", "Something went wrong. Please try again.", "error");
         }
-            // Send `data` to your backend here using axios/fetch
-            // await axios.post('/api/riders', data)
-            // Reset form and show success alert
-            // eslint-disable-next-line no-undef
-            ; (await axiosSecure.post('/riders', riderInformation))
-                .then(response => {
-                    if (response.data.insertedId) {
-                        Swal.fire({
-                            title: "Success!",
-                            text: "Your registration has been submitted successfully.",
-                            icon: "success",
-                            confirmButtonText: "OK"
-                        });
-                    }
-                })
-
-
-        // Reset form fields
-        Object.keys(data).forEach(key => setValue(key, ""));
-        setSelectedRegion("");
-        setSelectedCity("");
     };
 
-
     const requirements = [
-        {
-            icon: <FaIdCard className="text-blue-600 text-2xl" />,
-            title: "National Identity Card",
-            desc: "Original copy of your NID is required."
-        },
-        {
-            icon: <FaFileAlt className="text-green-600 text-2xl" />,
-            title: "Driving License",
-            desc: "Professional or non-professional license is accepted."
-        },
-        {
-            icon: <FaCarAlt className="text-yellow-600 text-2xl" />,
-            title: "Vehicle Registration Paper",
-            desc: "Provide legal registration papers of your vehicle."
-        },
-        {
-            icon: <FaReceipt className="text-red-600 text-2xl" />,
-            title: "Tax Token",
-            desc: "Valid tax token for your vehicle is required."
-        }
+        { icon: <FaIdCard />, title: "National ID", desc: "Original NID Copy" },
+        { icon: <FaFileAlt />, title: "Driving License", desc: "Professional / Non-Pro" },
+        { icon: <FaCarAlt />, title: "Registration Paper", desc: "Vehicle Blue Book" },
+        { icon: <FaReceipt />, title: "Tax Token", desc: "Up-to-date Tax Token" }
     ];
 
+    // Input Style Class
+    const inputClass = "w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm";
+    const labelClass = "block text-sm font-semibold text-gray-700 mb-2";
+
     return (
-        <div className="flex flex-col md:flex-row gap-10 p-5 md:p-20 bg-gray-50 min-h-screen">
-            {/* Left: Form */}
-            <div className="bg-white p-6 rounded-lg shadow-md w-full md:w-1/2">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-800">Register Now</h2>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
-                    {/* Vehicle Type */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Vehicle Type</label>
-                        <select
-                            {...register("vehicleType", { required: true })}
-                            className="w-full border rounded px-3 py-2"
-                        >
-                            <option value="Bike">Bike</option>
-                            <option value="Scooter">Scooter</option>
-                            <option value="Cycle">Cycle</option>
-                        </select>
-                        {errors.vehicleType && <p className="text-red-500 text-sm">Vehicle type is required</p>}
+        <div className="bg-slate-50 min-h-screen py-10 px-4 md:px-8 font-sans">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* LEFT: Application Form */}
+                <div className="lg:col-span-7 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="border-b border-gray-100 pb-6 mb-6">
+                        <h2 className="text-3xl font-bold text-slate-800">Rider Application</h2>
+                        <p className="text-slate-500 mt-2">Fill in your details to join our elite delivery team.</p>
                     </div>
 
-                    {/* Bike Registration Number */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Bike Registration Number *</label>
-                        <input
-                            type="text"
-                            {...register("bikeRegistrationNumber", {
-                                required: true
-                            })}
-                            placeholder="91XXXXXXXXX"
-                            className="w-full border rounded px-3 py-2"
-                        />
-                        {/* {errors.mobile && <p className="text-red-500 text-sm">Valid number is required</p>} */}
-                    </div>
-
-                    {/* Name */}
-                    <div className="flex gap-3">
-                        <div className="w-1/2">
-                            <label className="block text-sm font-medium mb-1">Full Name :</label>
-                            <input
-                                type="text"
-                                {...register("name", { required: true })}
-                                placeholder="Enter your first name"
-                                defaultValue={user?.displayName || ""}
-                                className="w-full border rounded px-3 py-2 text-gray-500" readOnly
-                            />
-                        </div>
-                        <div className="w-1/2">
-                            <label className="block text-sm font-medium mb-1">Email Address :</label>
-                            <input
-                                type="text"
-                                {...register("email")}
-                                defaultValue={user?.email || ""}
-                                placeholder="Enter your last name"
-                                className="w-full border rounded px-3 py-2 text-gray-500" readOnly
-                            />
-                        </div>
-                    </div>
-
-                    {/* Mobile Number */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Mobile Number *</label>
-                        <input
-                            type="text"
-                            {...register("mobile", {
-                                required: true,
-                                pattern: /^01[3-9]\d{8}$/
-                            })}
-                            placeholder="01XXXXXXXXX"
-                            className="w-full border rounded px-3 py-2"
-                        />
-                        {errors.mobile && <p className="text-red-500 text-sm">Valid number is required</p>}
-                    </div>
-                    { /* Nid Number */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Nid Number *</label>
-                        <input
-                            type="number"
-                            {...register("nid", {
-                                required: true
-                            })}
-                            placeholder="91XXXXXXXXX"
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </div>
-                    {/* Region Selection */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Region *</label>
-                        <select
-                            {...register("region", { required: true })}
-                            className="w-full border rounded px-3 py-2"
-                            onChange={e => {
-                                setSelectedRegion(e.target.value);
-                                setValue("region", e.target.value);
-                                setSelectedCity(""); // Reset city when region changes
-                                setValue("city", "");
-                            }}
-                            value={selectedRegion}
-                        >
-                            <option value="">Select region</option>
-                            {Array.isArray(data) &&
-                                [...new Set(data.map(item => item.region))].map((region, idx) => (
-                                    <option key={idx} value={region}>
-                                        {region}
-                                    </option>
-                                ))}
-                        </select>
-                        {errors.region && <p className="text-red-500 text-sm">Region is required</p>}
-                    </div>
-
-                    {/* City Selection */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1">City *</label>
-                        <select
-                            {...register("city", { required: true })}
-                            className="w-full border rounded px-3 py-2"
-                            value={selectedCity}
-                            onChange={e => {
-                                setSelectedCity(e.target.value);
-                                setValue("city", e.target.value);
-                            }}
-                            disabled={!selectedRegion}
-                        >
-                            <option value="">Select City</option>
-                            {Array.isArray(data) &&
-                                data
-                                    .filter(item => item.region === selectedRegion)
-                                    .map((item, idx) => (
-                                        <option key={idx} value={item.city}>
-                                            {item.city}
-                                        </option>
-                                    ))}
-                        </select>
-                        {errors.city && <p className="text-red-500 text-sm">City is required</p>}
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="w-full cursor-pointer bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
-                    >
-                        Submit
-                    </button>
-                </form>
-            </div>
-
-            {/* Right: Info */}
-            <div className="w-full md:w-1/2">
-                <div className="mb-6">
-                    <h2 className="text-2xl font-semibold text-gray-800">Got a bike?</h2>
-                    <p className="text-gray-600 mt-1 mb-3">These are the services you can be a part of!</p>
-                    <div className="flex flex-wrap gap-3">
-                        <span className="flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded">🛵 Bike Rider</span>
-                        <span className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded">🍽 Food Man</span>
-                        <span className="flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded">📦 Parcel Delivery</span>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-xl font-bold mb-2 text-gray-800">PickOn Rider: Easy Income Opportunity!</h3>
-                    <p className="text-gray-600">
-                        Now earn from 45,000 to 50,000 taka per month being a PickOn Rider. Enjoy 1% commission as a new rider.
-                        Along with ride sharing, take the opportunity to earn extra income through parcel delivery.
-                        Become a PickOn Hero today!
-                    </p>
-                </div>
-
-                <div className="bg-gray-50 py-10 px-5 md:px-20 mt-6">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-                        What is required to apply?
-                    </h2>
-                    <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">
-                        Not sure if you’re eligible to be a rider? If you have the following documents, you can join us!
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                        {requirements.map((item, index) => (
-                            <div key={index} className="flex items-start gap-4 bg-white p-5 rounded-lg shadow hover:shadow-md transition">
-                                <div className="flex-shrink-0">
-                                    {item.icon}
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        
+                        {/* Section: Personal Info */}
+                        <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
+                            <h3 className="text-blue-800 font-bold mb-4 flex items-center gap-2">
+                                <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> 
+                                Personal Information
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Full Name</label>
+                                    <input type="text" {...register("name")} defaultValue={user?.displayName || ""} readOnly className={`${inputClass} bg-gray-100 cursor-not-allowed text-gray-500`} />
                                 </div>
                                 <div>
-                                    <h4 className="text-lg font-semibold text-gray-800">{item.title}</h4>
-                                    <p className="text-gray-600 text-sm">{item.desc}</p>
+                                    <label className={labelClass}>Email Address</label>
+                                    <input type="text" {...register("email")} defaultValue={user?.email || ""} readOnly className={`${inputClass} bg-gray-100 cursor-not-allowed text-gray-500`} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Mobile Number <span className="text-red-500">*</span></label>
+                                    <input type="text" {...register("mobile", { required: true, pattern: /^01[3-9]\d{8}$/ })} placeholder="01XXXXXXXXX" className={inputClass} />
+                                    {errors.mobile && <p className="text-red-500 text-xs mt-1">Valid BD number required</p>}
+                                </div>
+                                <div>
+                                    <label className={labelClass}>NID Number <span className="text-red-500">*</span></label>
+                                    <input type="number" {...register("nid", { required: true })} placeholder="National ID Number" className={inputClass} />
                                 </div>
                             </div>
-                        ))}
+                        </div>
+
+                        {/* Section: Vehicle Info */}
+                        <div className="bg-orange-50/50 p-5 rounded-xl border border-orange-100">
+                            <h3 className="text-orange-800 font-bold mb-4 flex items-center gap-2">
+                                <span className="bg-orange-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> 
+                                Vehicle Details
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Vehicle Type <span className="text-red-500">*</span></label>
+                                    <select {...register("vehicleType", { required: true })} className={inputClass}>
+                                        <option value="Bike">Motorcycle</option>
+                                        <option value="Scooter">Scooter</option>
+                                        <option value="Cycle">Bicycle</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Registration Number <span className="text-red-500">*</span></label>
+                                    <input type="text" {...register("bikeRegistrationNumber", { required: true })} placeholder="DHAKA METRO-HA-XX-XXXX" className={inputClass} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section: Location */}
+                        <div className="bg-green-50/50 p-5 rounded-xl border border-green-100">
+                            <h3 className="text-green-800 font-bold mb-4 flex items-center gap-2">
+                                <span className="bg-green-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> 
+                                Preferred Area
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Region <span className="text-red-500">*</span></label>
+                                    <select 
+                                        {...register("region", { required: true })} 
+                                        className={inputClass}
+                                        onChange={e => {
+                                            setSelectedRegion(e.target.value);
+                                            setValue("region", e.target.value);
+                                            setSelectedCity("");
+                                            setValue("city", "");
+                                        }}
+                                    >
+                                        <option value="">Select Region</option>
+                                        {Array.isArray(data) && [...new Set(data.map(item => item.region))].map((region, idx) => (
+                                            <option key={idx} value={region}>{region}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>City/Zone <span className="text-red-500">*</span></label>
+                                    <select 
+                                        {...register("city", { required: true })} 
+                                        className={inputClass}
+                                        value={selectedCity}
+                                        onChange={e => {
+                                            setSelectedCity(e.target.value);
+                                            setValue("city", e.target.value);
+                                        }}
+                                        disabled={!selectedRegion}
+                                    >
+                                        <option value="">Select Zone</option>
+                                        {Array.isArray(data) && data
+                                            .filter(item => item.region === selectedRegion)
+                                            .map((item, idx) => (
+                                                <option key={idx} value={item.city}>{item.city}</option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4">
+                            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95">
+                                Submit Application
+                            </button>
+                            <p className="text-center text-xs text-gray-400 mt-4">
+                                By clicking submit, you agree to our Terms & Conditions and Privacy Policy.
+                            </p>
+                        </div>
+                    </form>
+                </div>
+
+                {/* RIGHT: Sticky Info Panel */}
+                <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+                    
+                    {/* Hero Card */}
+                    <div className="bg-slate-900 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+                        <h2 className="text-2xl font-bold mb-4">Why Join Us?</h2>
+                        <ul className="space-y-3 text-slate-300 mb-6">
+                            <li className="flex items-center gap-2"><FaMotorcycle className="text-[#CAEB66]" /> Earn up to 50k BDT/month</li>
+                            <li className="flex items-center gap-2"><FaBoxOpen className="text-[#CAEB66]" /> Flexible Delivery Slots</li>
+                            <li className="flex items-center gap-2"><FaUtensils className="text-[#CAEB66]" /> Food & Parcel Delivery</li>
+                        </ul>
+                        <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/10">
+                            <p className="text-sm font-medium">🎉 Special Offer</p>
+                            <p className="text-xs text-slate-400 mt-1">Get 0% commission for the first month if you join today!</p>
+                        </div>
                     </div>
+
+                    {/* Requirements Grid */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 className="font-bold text-slate-800 mb-4">Required Documents</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {requirements.map((req, i) => (
+                                <div key={i} className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors">
+                                    <div className="text-2xl text-blue-600 mb-2">{req.icon}</div>
+                                    <h4 className="font-bold text-sm text-slate-700">{req.title}</h4>
+                                    <p className="text-xs text-slate-500">{req.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     );
 };
-
 
 export default RiderForm;

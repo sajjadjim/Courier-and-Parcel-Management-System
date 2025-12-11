@@ -1,86 +1,84 @@
-
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-const position = [23.6850, 90.3563]; // Center of Bangladesh
+// Center of Bangladesh
+const defaultPosition = [23.8103, 90.4125]; 
 
-// Optional custom icon (can skip for default)
+// Custom Marker Icon
 const customIcon = new L.Icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', // Professional Map Pin
+    iconSize: [35, 35],
+    iconAnchor: [17, 35],
+    popupAnchor: [0, -30]
 });
 
-// Helper component to move map
-function FlyToDistrict({ coords }) {
+// Component to handle map movement
+function MapController({ activeDistrict }) {
     const map = useMap();
-    if (coords) {
-        map.flyTo(coords, 14, { duration: 3 });
-    }
+
+    useEffect(() => {
+        if (activeDistrict) {
+            map.flyTo(
+                [activeDistrict.latitude, activeDistrict.longitude], 
+                10, 
+                { duration: 1.5 }
+            );
+        }
+    }, [activeDistrict, map]);
+
     return null;
 }
 
-const BangladeshMap = ({ serviceCenters }) => {
-    const [searchText, setSearchText] = useState('');
-    const [activeCoords, setActiveCoords] = useState(null);
-    const [activeDistrict, setActiveDistrict] = useState(null);
-
-    const handleSearch = (e) => {
-        e.preventDefault();
-        const district = serviceCenters.find(d =>
-            d.district.toLowerCase().includes(searchText.toLowerCase())
-        );
-        if (district) {
-            setActiveCoords([district.latitude, district.longitude]);
-            setActiveDistrict(district.district);
-        }
-    };
+const BangladeshMap = ({ serviceCenters, activeDistrict }) => {
+    const mapRef = useRef(null);
 
     return (
-        <div className="md:h-[650px] h-[500px] w-full rounded-lg overflow-hidden shadow-lg relative">
-
-            <form
-                onSubmit={handleSearch}
-                className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-full max-w-md px-4 flex bg-gray-400"
+        <div className="h-full w-full z-0">
+            <MapContainer 
+                center={defaultPosition} 
+                zoom={7} 
+                scrollWheelZoom={true} 
+                className="h-full w-full"
+                ref={mapRef}
             >
-                <input
-                    type="text"
-                    placeholder="Search district..."
-                    className="flex-1 px-4 py-2 border rounded-l-md outline-none"
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                />
-                <button
-                    type="submit"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700"
-                >
-                    Go
-                </button>
-            </form>
-
-
-            {/* map container */}
-            <MapContainer center={position} zoom={8} scrollWheelZoom={false} className="h-full w-full z-0">
                 <TileLayer
-                    attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" // Professional lighter map theme
                 />
 
-                <FlyToDistrict coords={activeCoords} />
+                <MapController activeDistrict={activeDistrict} />
 
-                {
-                    serviceCenters.map((center, index) => <Marker
-                        key={index}
-                        position={[center.latitude, center.longitude]}
-                        icon={customIcon}>
-                        <Popup autoOpen={center.district === activeDistrict}>
-                            <strong>{center.district}</strong><br />
-                            {center.covered_area.join(', ')}
-                        </Popup>
-                    </Marker>)
-                }
+                {serviceCenters.map((center, index) => {
+                    // Check if this marker is the active one
+                    const isActive = activeDistrict?.district === center.district;
+
+                    return (
+                        <Marker
+                            key={index}
+                            position={[center.latitude, center.longitude]}
+                            icon={customIcon}
+                            eventHandlers={{
+                                click: () => {
+                                    // Optional: You could trigger parent state update here if needed
+                                },
+                            }}
+                        >
+                            <Popup className="custom-popup">
+                                <div className="p-1 min-w-[150px]">
+                                    <h3 className="font-bold text-slate-800 text-base mb-1">{center.district}</h3>
+                                    <p className="text-xs text-gray-500 mb-2">Service Hub Active</p>
+                                    <div className="border-t pt-2 mt-1">
+                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                            {center.covered_area.length} Areas
+                                        </span>
+                                    </div>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    );
+                })}
             </MapContainer>
         </div>
     );
