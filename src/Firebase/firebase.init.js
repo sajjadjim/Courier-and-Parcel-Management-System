@@ -14,12 +14,12 @@ import { getAuth } from "firebase/auth";
 // };
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDg9ROlzLUV9usRnIx2i9KVMWEiv_UbJUM",
-  authDomain: "delivery-project-13c2d.firebaseapp.com",
-  projectId: "delivery-project-13c2d",
-  storageBucket: "delivery-project-13c2d.firebasestorage.app",
-  messagingSenderId: "2844075016",
-  appId: "1:2844075016:web:e0c3fb1d5043f2958f5dbd"
+  apiKey: "AIzaSyCDbhXjq3xJqJHmiFyoKrJSMEY0SjVGVv8",
+  authDomain: "courier-and-parcel-management.firebaseapp.com",
+  projectId: "courier-and-parcel-management",
+  storageBucket: "courier-and-parcel-management.firebasestorage.app",
+  messagingSenderId: "1016992390522",
+  appId: "1:1016992390522:web:39b0984364b4b1be27cac3"
 };
 
 // Initialize Firebase
