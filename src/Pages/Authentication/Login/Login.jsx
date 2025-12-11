@@ -1,133 +1,184 @@
-import React, { use, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router';
-import { useLocation } from 'react-router';
-import { useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { toast, ToastContainer } from 'react-toastify';
+import { FaEnvelope, FaLock, FaGoogle, FaArrowRight, FaSpinner, FaTruckMoving } from 'react-icons/fa';
+
 import useAxiosInstance from '../../../Hooks/useAxiosInstance';
 import { AuthContext } from '../../../Context/AuthContext';
-// import { data } from 'react-router';
 
 const Login = () => {
     useEffect(() => {
-        document.title = "Login";
-    }, [])
-    const axiosInstance = useAxiosInstance()
-    const location = useLocation()
-    const navigate = useNavigate()
+        document.title = "Login | Welcome Back";
+    }, []);
 
-    const { register
-        , handleSubmit,
-        formState: { errors }
-    } = useForm();
-    const { user, signIn, signInWithGoogle } = use(AuthContext)
+    const [loading, setLoading] = useState(false);
+    const axiosInstance = useAxiosInstance();
+    const location = useLocation();
+    const navigate = useNavigate();
+    
+    // Redirect path (default to home if no history)
+    const from = location.state?.from?.pathname || location.state || "/";
 
-    const onSubmitData = (data) => {
-        // console.log(data);
-        // login in with email and password 
-        signIn(data.email, data.password)
-            .then(result => {
-                console.log(result)
+    const { register, handleSubmit, formState: { errors } } = useForm();
+    const { signIn, signInWithGoogle } = useContext(AuthContext);
 
-                // after 1 seconds automatic navigate the user homepage  || user last Page 
-                setTimeout(() => {
-                    navigate(`${location.state ? location.state : '/'}`)
-                }, 1000)
+    // 1. Email/Password Login
+    const onSubmitData = async (data) => {
+        setLoading(true);
+        try {
+            await signIn(data.email, data.password);
+            toast.success("Welcome back!", { position: "top-center" });
+            
+            // Short delay for visual feedback
+            setTimeout(() => {
+                navigate(from, { replace: true });
+            }, 1000);
+        } catch (error) {
+            console.error(error);
+            toast.error("Invalid email or password.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            }).catch(erro => {
-                alert(erro)
-            })
-    }
-
+    // 2. Google Login
     const handleLoginwithGoogle = () => {
         signInWithGoogle()
             .then(async (result) => {
-                console.log(result)
-
                 const userInfo = {
-                    email: user.email,
-                    name: user.displayName,
-                    role: 'user',
-                    image: user.photoURL,
-                    loginDate: new Date().toISOString(),
-                    lastLogin: new Date().toISOString(),
+                    name: result.user.displayName,
+                    email: result.user.email,
+                    role: 'user', // Default role, backend should handle existing roles
+                    image: result.user.photoURL,
+                    lastLogin: new Date(),
+                };
+
+                // Sync with Database
+                try {
+                    await axiosInstance.post('/users', userInfo);
+                    toast.success("Login Successful!");
+                    navigate(from, { replace: true });
+                } catch (err) {
+                    // Even if DB post fails (e.g. user exists), we still let them in
+                    console.log("User sync note:", err.response?.data?.message);
+                    navigate(from, { replace: true });
                 }
-                // then that post to the MongoDB Data base that function write here 
-
-                // user Information Add To the mongoDB database 
-                const userResponse = await axiosInstance.post('/users', userInfo)
-                console.log(userResponse.data)
-
-                // after 1 seconds automatic navigate the user homepage  || user last Page 
-                setTimeout(() => {
-                    navigate(`${location.state ? location.state : '/'}`)
-                }, 1000)
             })
             .catch(error => {
-                console.log(error)
-            })
-    }
-
+                console.error(error);
+                toast.error("Google Sign-in failed.");
+            });
+    };
 
     return (
-        <div className="flex min-h-screen items-center justify-center py-8 px-4  relative">
-            <div className="w-full md:w-[500px] max-w-md bg-white rounded-2xl shadow-lg p-8 md:p-10 relative md:-mt-45">
-                {/* Logo and Title */}
+        <div className="min-h-screen flex bg-white font-sans">
+            <ToastContainer />
 
-                <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">Welcome Back!</h2>
-                <form onSubmit={handleSubmit(onSubmitData)} className="space-y-5 text-black">
-                    <div>
-                        <label className="block  font-semibold mb-1">Email</label>
-                        <input
-                            type="email"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                            placeholder="Enter your email"
-                            {...register('email', { required: true })}
-                        />
-                        {errors.email && <p className="text-red-500 text-sm mt-1">Email is required</p>}
+            {/* === LEFT SIDE: Branding (Hidden on Mobile) === */}
+            <div className="hidden lg:flex w-1/2 bg-slate-900 relative items-center justify-center p-12 overflow-hidden">
+                {/* Background Decor */}
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#CAEB66] rounded-full blur-[120px] opacity-10 translate-y-1/2 -translate-x-1/2"></div>
+
+                <div className="relative z-10 text-white max-w-lg">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/10 text-[#CAEB66]">
+                            <FaTruckMoving size={28} />
+                        </div>
+                        <span className="text-xl font-bold tracking-wide">PickOn Logistics</span>
                     </div>
-                    <div>
-                        <label className="block  font-semibold mb-1">Password</label>
-                        <input
-                            type="password"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                            placeholder="Enter your password"
-                            {...register('password', { required: true, minLength: 8 })}
-                        />
-                        {errors.password?.type === 'required' && (
-                            <p className="text-red-500 text-sm mt-1">Password is required</p>
-                        )}
-                        {errors.password?.type === 'minLength' && (
-                            <p className="text-red-500 text-sm mt-1">Password must be at least 8 characters long</p>
-                        )}
-                    </div>
-                    <div className="flex justify-end">
-                        <a className="text-blue-500 hover:underline text-sm cursor-pointer">Forgot password?</a>
-                    </div>
-                    <button
-                        className="w-full cursor-pointer btn-primary hover:bg-blue-700 text-white font-semibold py-2 rounded-lg shadow transition"
-                        type="submit"
-                    >
-                        Login
-                    </button>
-                </form>
-                <div className="flex items-center my-6">
-                    <div className="flex-grow h-px bg-gray-300"></div>
-                    <span className="mx-3 text-gray-400">or</span>
-                    <div className="flex-grow h-px bg-gray-300"></div>
+                    
+                    <h1 className="text-5xl font-extrabold mb-6 leading-tight">
+                        Welcome Back, <br /> Partner.
+                    </h1>
+                    <p className="text-slate-300 text-lg leading-relaxed">
+                        Log in to track your shipments, manage deliveries, or book a new courier request instantly.
+                    </p>
                 </div>
-                <button
-                    onClick={handleLoginwithGoogle}
-                    className="w-full cursor-pointer flex items-center justify-center gap-2 text-black bg-white border border-gray-300 hover:bg-gray-50  font-semibold py-2 rounded-lg shadow transition"
-                >
-                    <svg aria-label="Google logo" width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g><path d="m0 0H512V512H0" fill="#fff"></path><path fill="#34a853" d="M153 292c30 82 118 95 171 60h62v48A192 192 0 0190 341"></path><path fill="#4285f4" d="m386 400a140 175 0 0053-179H260v74h102q-7 37-38 57"></path><path fill="#fbbc02" d="m90 341a208 200 0 010-171l63 49q-12 37 0 73"></path><path fill="#ea4335" d="m153 219c22-69 116-109 179-50l55-54c-78-75-230-72-297 55"></path></g></svg>
-                    Login with Google
-                </button>
-                <p className="text-center mt-6 text-gray-600">
-                    Don't have an account?{' '}
-                    <Link className="text-blue-600 hover:underline font-semibold" to="/register">
-                        Register
-                    </Link>
-                </p>
+            </div>
+
+            {/* === RIGHT SIDE: Form === */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
+                <div className="w-full max-w-md space-y-8">
+                    
+                    {/* Header */}
+                    <div className="text-center lg:text-left">
+                        <h2 className="text-3xl font-bold text-slate-900">Sign In</h2>
+                        <p className="text-slate-500 mt-2">Enter your credentials to access your account.</p>
+                    </div>
+
+                    <form onSubmit={handleSubmit(onSubmitData)} className="space-y-6">
+                        
+                        {/* Email Field */}
+                        <div className="group">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Email Address</label>
+                            <div className="relative">
+                                <input
+                                    type="email"
+                                    {...register('email', { required: true })}
+                                    className="w-full pl-11 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-800 placeholder:text-slate-400"
+                                    placeholder="name@example.com"
+                                />
+                                <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            </div>
+                            {errors.email && <p className="text-red-500 text-xs mt-1 ml-1">Email is required</p>}
+                        </div>
+
+                        {/* Password Field */}
+                        <div className="group">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Password</label>
+                            <div className="relative">
+                                <input
+                                    type="password"
+                                    {...register('password', { required: true, minLength: 6 })}
+                                    className="w-full pl-11 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-800 placeholder:text-slate-400"
+                                    placeholder="••••••••"
+                                />
+                                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            </div>
+                            {errors.password && <p className="text-red-500 text-xs mt-1 ml-1">Password must be at least 6 characters</p>}
+                            
+                            <div className="flex justify-end mt-2">
+                                <a href="#" className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">Forgot password?</a>
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-xl shadow-lg shadow-blue-200 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                            {loading ? <FaSpinner className="animate-spin" /> : 'Log In'} 
+                            {!loading && <FaArrowRight size={16} />}
+                        </button>
+                    </form>
+
+                    {/* Divider */}
+                    <div className="relative flex py-2 items-center">
+                        <div className="flex-grow border-t border-slate-200"></div>
+                        <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase">Or continue with</span>
+                        <div className="flex-grow border-t border-slate-200"></div>
+                    </div>
+
+                    {/* Google Button */}
+                    <button
+                        onClick={handleLoginwithGoogle}
+                        className="w-full py-3.5 border-2 border-slate-100 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all flex items-center justify-center gap-3"
+                    >
+                        <FaGoogle className="text-red-500 text-xl" /> 
+                        <span>Google</span>
+                    </button>
+
+                    {/* Register Link */}
+                    <p className="text-center text-slate-500 mt-8">
+                        Don't have an account?{' '}
+                        <Link className="text-blue-600 font-bold hover:underline" to="/register">
+                            Register Now
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

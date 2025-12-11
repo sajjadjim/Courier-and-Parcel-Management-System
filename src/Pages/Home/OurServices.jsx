@@ -1,77 +1,92 @@
 import React from "react";
+import { FaShippingFast, FaGlobeAsia, FaWarehouse, FaMoneyBillWave, FaHandshake, FaUndoAlt } from "react-icons/fa";
 
 const services = [
   {
-    img: 'https://static.vecteezy.com/system/resources/previews/047/750/060/non_2x/express-delivery-icon-in-flat-style-fast-shipping-illustration-on-isolated-background-commercial-service-sign-business-concept-vector.jpg',
-    title: "Express & Standard Delivery",
-    description:
-      "We deliver parcels within 24–72 hours in Dhaka, Chittagong, Sylhet, Khulna, and Rajshahi. Express delivery available in Dhaka within 4–6 hours from pick-up to drop-off.",
+    icon: <FaShippingFast />,
+    title: "Express & Standard",
+    description: "Lightning-fast delivery within 24–72 hours across major cities. Dhaka express options available for same-day 4-6 hour delivery.",
+    color: "text-yellow-400"
   },
   {
-    img: 'https://cdn4.iconfinder.com/data/icons/logistics-40/48/66-512.png',
-    title: "Nationwide Delivery",
-    description:
-      "We deliver parcels nationwide with home delivery in every district, ensuring your products reach customers within 48–72 hours.",
-    highlight: true,
+    icon: <FaGlobeAsia />,
+    title: "Nationwide Coverage",
+    description: "We reach every corner of the country. Home delivery to all 64 districts within 48–72 hours guaranteed.",
+    color: "text-blue-400"
   },
   {
-    img: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSf0LcHsU3-zkPmBIN1Z69gRALxWnkyxs93YQ&s',
-    title: "Fulfillment Solution",
-    description:
-      "We also offer customized service with inventory management support, online order processing, packaging, and after sales support.",
+    icon: <FaWarehouse />,
+    title: "Fulfillment Solutions",
+    description: "End-to-end business support including inventory management, secure warehousing, packaging, and order processing.",
+    color: "text-purple-400"
   },
   {
-    img: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJa9JqS06LZD-z0umfOihALnyGR5YzETL62Q&s',
-    title: "Cash on Home Delivery",
-    description:
-      "100% cash on delivery anywhere in Bangladesh with guaranteed safety of your product.",
+    icon: <FaMoneyBillWave />,
+    title: "Cash on Delivery",
+    description: "100% secure cash collection service anywhere in Bangladesh. We ensure your funds are handled with maximum safety.",
+    color: "text-green-400"
   },
   {
-    img: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGHbdP0B0OSJrm_fH_hqknOnfVDemlbRFl6w&s',
-    title: "Corporate Service / Contract In Logistics",
-    description:
-      "Customized corporate services which includes warehouse and inventory management support.",
+    icon: <FaHandshake />,
+    title: "Corporate Logistics",
+    description: "Tailored contracts for large-scale businesses requiring dedicated fleets, priority support, and bulk management.",
+    color: "text-orange-400"
   },
   {
-    img: 'https://static.vecteezy.com/system/resources/previews/025/666/601/non_2x/parcel-return-fill-outline-icon-design-illustration-shipping-and-delivery-symbol-on-white-background-eps-10-file-vector.jpg',
-    title: "Parcel Return",
-    description:
-      "Through our reverse logistics facility we allow end customers to return or exchange their products with online business merchants.",
+    icon: <FaUndoAlt />,
+    title: "Easy Returns",
+    description: "Hassle-free reverse logistics. We manage returns and exchanges from customers back to merchants smoothly.",
+    color: "text-red-400"
   },
 ];
 
 const OurServices = () => {
   return (
-    <section className="bg-[#003333] text-white py-12 px-4 rounded-3xl">
-      <div className="max-w-7xl mx-auto text-center">
-        <h2 className="text-3xl font-bold mb-4">Our Services</h2>
-        <p className="text-base mb-10 max-w-2xl mx-auto">
-          Enjoy fast, reliable parcel delivery with real-time tracking and zero hassle. From personal packages to business shipments — we deliver on time, every time.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <section className="bg-slate-900 py-20 px-6 font-sans">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Header */}
+        <div className="text-center mb-16">
+          <span className="text-teal-400 font-bold tracking-widest uppercase text-xs mb-2 block">
+            What We Do
+          </span>
+          <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6">
+            Comprehensive Logistics <span className="text-teal-500">Solutions</span>
+          </h2>
+          <p className="text-slate-400 text-lg max-w-3xl mx-auto leading-relaxed">
+            From personal parcels to enterprise supply chains, we provide the infrastructure you need to move goods faster, safer, and smarter.
+          </p>
+        </div>
+
+        {/* Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {services.map((service, index) => (
             <div
               key={index}
-              className={`rounded-xl p-6  shadow-2xl transition duration-300 ease-in-out transform hover:scale-105 hover:bg-lime-300 hover:text-black `}
+              className="group relative bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 p-8 rounded-2xl hover:bg-slate-800 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-teal-900/20"
             >
-              <div className="mb-4">
-                <img
-                  src={service.img}
-                  alt="Service Icon"
-                  className="w-10 h-10 mx-auto"
-                />
+              {/* Icon */}
+              <div className={`w-14 h-14 rounded-xl bg-slate-900 flex items-center justify-center text-3xl mb-6 shadow-inner ${service.color} group-hover:scale-110 transition-transform duration-300`}>
+                {service.icon}
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-center">
+
+              {/* Text */}
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-teal-400 transition-colors">
                 {service.title}
               </h3>
-              <p className="text-sm text-center">{service.description}</p>
+              <p className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-300">
+                {service.description}
+              </p>
+
+              {/* Decorative corner glow */}
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-teal-500/10 to-transparent rounded-tr-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
           ))}
         </div>
+
       </div>
     </section>
   );
 };
 
 export default OurServices;
-
