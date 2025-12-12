@@ -5,8 +5,8 @@
 **PickOn** is a modern, full-stack logistics platform designed to streamline parcel booking, delivery tracking, and rider management. It connects Merchants, Customers, and Delivery Riders in a seamless ecosystem with real-time updates and interactive maps.
 
 ## 🚀 Live Demo
-- **Client (Netlify):** [Click Here to View](https://your-netlify-link.app)
-- **Server (Vercel):** [API Endpoint](https://your-vercel-link.app)
+- **Client (Netlify):** [Click Here to View](https://pickon-bd.netlify.app/)
+- **Server (Vercel):** [API Endpoint](https://server-courier-and-parcel-managemen.vercel.app/)
 
 ---
 
@@ -92,7 +92,11 @@ Bash
 npm run dev
 Open http://localhost:5173 in your browser.
 
+```
+---
+
 🏗️ Project Structure
+```bash
 src/
 ├── Components/       # Reusable UI components (Loading, Navbar, Footer)
 ├── Context/          # AuthProvider & Global Context
@@ -104,20 +108,21 @@ src/
 │   ├── Auth/         # Login & Register Pages
 ├── Router/           # React Router Configuration
 └── main.jsx          # Entry Point
-
+```
+--- 
 
 🤝 Contribution
 Contributions are welcome!
 
-Fork the project.
+1. Fork the project.
 
-Create your Feature Branch (git checkout -b feature/AmazingFeature).
+2. Create your Feature Branch (git checkout -b feature/AmazingFeature).
 
-Commit your changes (git commit -m 'Add some AmazingFeature').
+3. Commit your changes (git commit -m 'Add some AmazingFeature').
 
-Push to the Branch (git push origin feature/AmazingFeature).
+4. Push to the Branch (git push origin feature/AmazingFeature).
 
-Open a Pull Request.
+5. Open a Pull Request.
 
 📄 License
 Distributed under the MIT License. See LICENSE for more information.
