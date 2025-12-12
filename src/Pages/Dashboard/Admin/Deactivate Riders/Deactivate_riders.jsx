@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Swal from "sweetalert2";
 import { FaSearch, FaUserCheck, FaFilter, FaMotorcycle, FaMapMarkerAlt, FaUserTie, FaBan } from "react-icons/fa";
-import UseAxiosSecure from "../../../Hooks/UseAxiosSecure";
+import UseAxiosSecure from "../../../../Hooks/UseAxiosSecure";
 
 const Deactive_riders = () => {
   const axiosSecure = UseAxiosSecure();

@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaMotorcycle, FaArrowRight, FaCalendarAlt, FaUserTie, FaSearch, FaTimes, FaMapMarkerAlt, FaBox } from "react-icons/fa";
 import { use, useState, useMemo } from "react";
 import Swal from "sweetalert2";
-import UseAxiosSecure from "../../../Hooks/UseAxiosSecure";
-import useTrackingLogger from "../../../Hooks/useTrackingLogger";
-import { AuthContext } from "../../../Context/AuthContext";
+import UseAxiosSecure from "../../../../Hooks/UseAxiosSecure";
+import useTrackingLogger from "../../../../Hooks/useTrackingLogger";
+import { AuthContext } from "../../../../Context/AuthContext";
 
 const AssignRider = () => {
     const axiosSecure = UseAxiosSecure();

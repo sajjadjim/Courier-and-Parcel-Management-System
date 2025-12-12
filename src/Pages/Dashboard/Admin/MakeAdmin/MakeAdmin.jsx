@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { FaSearch, FaUserShield, FaUserTimes } from "react-icons/fa";
 import Swal from "sweetalert2";
-import UseAxiosSecure from "../../../Hooks/UseAxiosSecure";
+import UseAxiosSecure from "../../../../Hooks/UseAxiosSecure";
 
 const MakeAdmin = () => {
     const axiosSecure = UseAxiosSecure();

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import React, { use, useEffect, useState } from 'react';
-import { AuthContext } from '../../../Context/AuthContext';
-import UseAxiosSecure from '../../../Hooks/UseAxiosSecure';
+import { AuthContext } from '../../../../Context/AuthContext';
+import UseAxiosSecure from '../../../../Hooks/UseAxiosSecure';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router';
 import { FaBoxOpen, FaCreditCard, FaEdit, FaTrashAlt, FaFilter, FaPlus } from "react-icons/fa";

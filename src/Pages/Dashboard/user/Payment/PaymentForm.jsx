@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router'; 
 import Swal from 'sweetalert2';
 
-import UseAxiosSecure from '../../../Hooks/UseAxiosSecure';
-import { AuthContext } from '../../../Context/AuthContext';
-import useTrackingLogger from '../../../Hooks/useTrackingLogger';
+import UseAxiosSecure from '../../../../Hooks/UseAxiosSecure';
+import { AuthContext } from '../../../../Context/AuthContext';
+import useTrackingLogger from '../../../../Hooks/useTrackingLogger';
 
 const PaymentForm = () => {
     const { user } = useContext(AuthContext);

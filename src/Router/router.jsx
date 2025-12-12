@@ -9,28 +9,35 @@ import Login from "../Pages/Authentication/Login/Login";
 import Register from "../Pages/Authentication/Register/Register";
 import Coverage from "../Pages/Coverage Area/Coverage";
 import PrivateRoute from "../Routers/PrivateRoute";
-import AddParcel from "../Pages/Add Parcel/AddParcel";
+import Send_Parcel from "../Pages/Send Parcel/Send_Parcel";
 import DashBoardLayout from "../Layout/DashBoardLayout";
-import MyParcels from "../Pages/Dashboard/MyParcels/MyParcels";
-import Payment from "../Pages/Dashboard/Payment/Payment";
-import PaymentHistory from "../Pages/Dashboard/Payment-History/PaymentHistory";
+
+// users dashboard all the point here 
+import MyParcels from "../Pages/Dashboard/user/MyParcels/MyParcels";
+import Payment from "../Pages/Dashboard/user/Payment/Payment";
+import PaymentHistory from "../Pages/Dashboard/user/Payment-History/PaymentHistory";
+
 import BeARider from "../Pages/Be A Raider/BeARider";
 import RiderForm from "../Pages/Be A Raider/Rider_Form/RiderForm";
-import Active_riders from "../Pages/Dashboard/Active Riders/Active_riders";
-import Pending_Riders from "../Pages/Dashboard/Pending Riders/Pending_Riders";
-import MakeAdmin from "../Pages/Dashboard/MakeAdmin/MakeAdmin";
+// Admin route all path here 
+import Active_riders from "../Pages/Dashboard/Admin/Active Riders/Active_riders";
+import Pending_Riders from "../Pages/Dashboard/Admin/Pending Riders/Pending_Riders";
+import Deactive_riders from "../Pages/Dashboard/Admin/Deactivate Riders/Deactivate_riders";
+import AssignRider from "../Pages/Dashboard/Admin/Asign_Rider/AssignRider";
+import MakeAdmin from "../Pages/Dashboard/Admin/MakeAdmin/MakeAdmin";
 import AdminRoute from "../Routers/AdminRoute";
+
 import Forbidden from "../Pages/Forbidden Access/Forbidden";
-import AssignRider from "../Pages/Dashboard/Asign Router/AssignRider";
+// rider route all the path here 
 import RiderRoute from "../Routers/RiderRoute";
-import PendingDelivary from "../Pages/Dashboard/Rider Elements/Pending Delivary/PendingDelivary";
-import CompletedDelivery from "../Pages/Dashboard/Rider Elements/CompletedDelivary/CompletedDelivery";
-import MyEarning from "../Pages/Dashboard/Rider Elements/My Earning/MyEarning";
+import PendingDelivary from "../Pages/Dashboard/Rider/Pending Delivary/PendingDelivary";
+import CompletedDelivery from "../Pages/Dashboard/Rider/CompletedDelivary/CompletedDelivery";
+import MyEarning from "../Pages/Dashboard/Rider/My Earning/MyEarning";
 import DashboardHome from "../Pages/Dashboard/DashboardHome/DashboardHome";
 import ProfileUpdate from "../Pages/Dashboard/user/ProfileUpdate";
 import AllFaQ from "../Pages/Home/FaQ/AllFaQ";
 import Track_parcel from "../Pages/Dashboard/user/tracking_parcel/Track_parcel";
-import Deactive_riders from "../Pages/Dashboard/Deactivate Riders/Deactivate_riders";
+
 
 
 
@@ -58,8 +65,8 @@ const router = createBrowserRouter([
       },
       // add parcel components 
       {
-        path: 'addparcel',
-        element: <PrivateRoute><AddParcel></AddParcel></PrivateRoute>,
+        path: 'send_parcel',
+        element: <PrivateRoute><Send_Parcel></Send_Parcel></PrivateRoute>,
         loader: () => fetch('../../public/DataAll/areaMap.json')
       },
       {
@@ -73,6 +80,10 @@ const router = createBrowserRouter([
       },
       {
         path:'/forbidden',
+        Component: Forbidden
+      },
+      {
+        path: '*',
         Component: Forbidden
       }
     ]

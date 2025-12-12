@@ -21,7 +21,7 @@ const generateTrackingID = () => {
     return `PCL-${datePart}-${rand}`;
 };
 
-const AddParcel = () => {
+const Send_Parcel = () => {
     document.title = "Add Parcel | PickOnGo";
 
     const { user } = useContext(AuthContext);
@@ -469,4 +469,4 @@ const AddParcel = () => {
     );
 };
 
-export default AddParcel;
+export default Send_Parcel;

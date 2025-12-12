@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
-import { AuthContext } from '../../../Context/AuthContext';
-import UseAxiosSecure from '../../../Hooks/UseAxiosSecure';
+import { AuthContext } from '../../../../Context/AuthContext';
+import UseAxiosSecure from '../../../../Hooks/UseAxiosSecure';
 import { useQuery } from '@tanstack/react-query';
 import { 
     FaFileInvoiceDollar, 
