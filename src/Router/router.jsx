@@ -4,7 +4,6 @@ import {
 } from "react-router";
 import Home from '../Pages/Home/Home'
 import RootLayout from "../Layout/RootLayout";
-import AllFaQ from "../Pages/Home/FaQ/ALlFaQ";
 import AuthLayout from "../Layout/AuthLayout";
 import Login from "../Pages/Authentication/Login/Login";
 import Register from "../Pages/Authentication/Register/Register";
@@ -30,6 +29,7 @@ import CompletedDelivery from "../Pages/Dashboard/Rider Elements/CompletedDeliva
 import MyEarning from "../Pages/Dashboard/Rider Elements/My Earning/MyEarning";
 import DashboardHome from "../Pages/Dashboard/DashboardHome/DashboardHome";
 import ProfileUpdate from "../Pages/Dashboard/user/ProfileUpdate";
+import AllFaQ from "../Pages/Home/FaQ/ALlFaQ";
 
 
 
@@ -47,7 +47,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/FaQ',
-        Component: AllFaQ
+       element: <AllFaQ></AllFaQ>
       },
       {
         path: '/coverage',
