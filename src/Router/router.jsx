@@ -47,7 +47,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/FaQ',
-       element: <AllFaQ></AllFaQ>
+       Component: AllFaQ
       },
       {
         path: '/coverage',
