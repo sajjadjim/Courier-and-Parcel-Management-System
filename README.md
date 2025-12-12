@@ -96,6 +96,7 @@ Open http://localhost:5173 in your browser.
 ---
 
 🏗️ Project Structure
+```bash
 src/
 ├── Components/       # Reusable UI components (Loading, Navbar, Footer)
 ├── Context/          # AuthProvider & Global Context
@@ -107,7 +108,7 @@ src/
 │   ├── Auth/         # Login & Register Pages
 ├── Router/           # React Router Configuration
 └── main.jsx          # Entry Point
-
+```
 --- 
 
 🤝 Contribution
