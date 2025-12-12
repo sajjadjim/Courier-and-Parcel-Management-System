@@ -92,6 +92,9 @@ Bash
 npm run dev
 Open http://localhost:5173 in your browser.
 
+```
+---
+
 🏗️ Project Structure
 src/
 ├── Components/       # Reusable UI components (Loading, Navbar, Footer)
@@ -105,19 +108,20 @@ src/
 ├── Router/           # React Router Configuration
 └── main.jsx          # Entry Point
 
+--- 
 
 🤝 Contribution
 Contributions are welcome!
 
-Fork the project.
+1. Fork the project.
 
-Create your Feature Branch (git checkout -b feature/AmazingFeature).
+2. Create your Feature Branch (git checkout -b feature/AmazingFeature).
 
-Commit your changes (git commit -m 'Add some AmazingFeature').
+3. Commit your changes (git commit -m 'Add some AmazingFeature').
 
-Push to the Branch (git push origin feature/AmazingFeature).
+4. Push to the Branch (git push origin feature/AmazingFeature).
 
-Open a Pull Request.
+5. Open a Pull Request.
 
 📄 License
 Distributed under the MIT License. See LICENSE for more information.
