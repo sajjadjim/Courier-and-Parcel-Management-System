@@ -29,7 +29,7 @@ import CompletedDelivery from "../Pages/Dashboard/Rider Elements/CompletedDeliva
 import MyEarning from "../Pages/Dashboard/Rider Elements/My Earning/MyEarning";
 import DashboardHome from "../Pages/Dashboard/DashboardHome/DashboardHome";
 import ProfileUpdate from "../Pages/Dashboard/user/ProfileUpdate";
-import AllFaQ from "../Pages/Home/FaQ/ALlFaQ";
+import AllFaQ from "../Pages/Home/FaQ/AllFaQ";
 
 
 
