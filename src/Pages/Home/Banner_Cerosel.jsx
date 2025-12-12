@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import "react-responsive-carousel/lib/styles/carousel.min.css"; 
 import { Carousel } from 'react-responsive-carousel';
 import { FaArrowRight, FaSearch, FaBoxOpen, FaTruck, FaShieldAlt } from 'react-icons/fa';
-import { useNavigate } from 'react-router';
+
 
 
 const banners = [
@@ -33,15 +33,7 @@ const banners = [
 ];
 
 const BannerCarousel = () => {
-  const [trackId, setTrackId] = useState('');
-  const navigate = useNavigate();
 
-  const handleTrack = (e) => {
-    e.preventDefault();
-    if(trackId) {
-        navigate(`/dashboard/track-package?id=${trackId}`);
-    }
-  };
 
   return (
     <div className="relative w-full h-[600px] md:h-[700px] font-sans">
@@ -93,10 +85,10 @@ const BannerCarousel = () => {
 
                     {/* Buttons */}
                     <div className="flex flex-wrap gap-4 pt-4">
-                        <button className={`${item.color} hover:brightness-110 text-white px-8 py-3.5 rounded-full font-bold shadow-lg transition-all flex items-center gap-2`}>
+                        <button className={`${item.color} hover:brightness-110 cursor-pointer text-white px-8 py-3.5 rounded-full font-bold shadow-lg transition-all flex items-center gap-2`}>
                             Get Started <FaArrowRight />
                         </button>
-                        <button className="bg-white text-slate-900 px-8 py-3.5 rounded-full font-bold shadow-lg hover:bg-gray-100 transition-all">
+                        <button className="bg-white cursor-pointer text-slate-900 px-8 py-3.5 rounded-full font-bold shadow-lg hover:bg-gray-100 transition-all">
                             View Pricing
                         </button>
                     </div>
@@ -109,38 +101,7 @@ const BannerCarousel = () => {
       </Carousel>
 
       {/* 2. FLOATING TRACKING BOX (Professional Logistics Feature) */}
-      <div className="absolute -bottom-16 left-0 right-0 z-20 px-4">
-        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6 md:p-8 border border-gray-100 transform -translate-y-1/2 md:-translate-y-24">
-            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <FaSearch className="text-blue-600" /> Track Your Shipment
-            </h3>
-            
-            <form onSubmit={handleTrack} className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                    <input 
-                        type="text" 
-                        placeholder="Enter Tracking ID (e.g. PCL-2025-XYZ)"
-                        className="w-full pl-4 pr-4 py-4 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-gray-700 font-mono text-sm bg-gray-50"
-                        value={trackId}
-                        onChange={(e) => setTrackId(e.target.value)}
-                    />
-                </div>
-                <button 
-                    type="submit"
-                    className="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg flex justify-center items-center gap-2"
-                >
-                    Track Now
-                </button>
-            </form>
-
-            <div className="mt-4 flex gap-6 text-xs text-gray-400 font-medium">
-                <span>Popular:</span>
-                <span className="hover:text-blue-600 cursor-pointer underline">Document Delivery</span>
-                <span className="hover:text-blue-600 cursor-pointer underline">E-commerce</span>
-                <span className="hover:text-blue-600 cursor-pointer underline">Same Day</span>
-            </div>
-        </div>
-      </div>
+   
 
     </div>
   );

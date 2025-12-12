@@ -8,6 +8,8 @@ import BeMerchant from './Be Marchent/BeMerchant';
 import CustomerReview from './Customer Review/CustomerReview';
 import FaQ from './FaQ/FaQ';
 import ServiceGrid from './Services/ServiceGrid';
+import TracParcel from './TracParcel';
+
 
 
 const Home = () => {
@@ -15,13 +17,16 @@ const Home = () => {
     // use dynamic website name 
     useEffect(()=>{
         // window.scrollTo(0, 0);
-        document.title = "Home";
+        document.title = "Home | PickOnGo - Fastest Delivery Service";
     },[])
     return (
         <div>
             {/* <h1>My Home Page</h1> */}
             <div className='md:w-10/13 mx-auto my-5'>
                 <Banner_Cerosel ></Banner_Cerosel>
+            </div>
+            <div>
+               <TracParcel></TracParcel>
             </div>
             <div>
                 <OurServices></OurServices>

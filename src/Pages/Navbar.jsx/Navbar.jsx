@@ -106,7 +106,7 @@ const Navbar = () => {
                 <div 
                   tabIndex={0} 
                   role="button" 
-                  className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-full hover:bg-slate-100 transition-all border border-transparent hover:border-slate-200 cursor-pointer group"
+                  className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-full bg-slate-100 hover:bg-white transition-all border border-transparent hover:border-slate-200 cursor-pointer group"
                 >
                   
                   {/* Name & Role text */}
@@ -115,7 +115,7 @@ const Navbar = () => {
                       {user?.displayName?.split(" ")[0] || "User"}
                     </p>
                     <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">
-                      Member
+                      {user?.role || "Customer"}
                     </p>
                   </div>
 

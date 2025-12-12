@@ -22,6 +22,9 @@ const generateTrackingID = () => {
 };
 
 const AddParcel = () => {
+
+    document.title = "Add Parcel | PickOnGo - Fastest Delivery Service";
+
     const { user } = use(AuthContext);
     const axiosSecure = UseAxiosSecure();
     const warehouseData = useLoaderData();

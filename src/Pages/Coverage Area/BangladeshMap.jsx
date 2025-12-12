@@ -3,28 +3,46 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
 
-// Center of Bangladesh
-const defaultPosition = [23.8103, 90.4125]; 
+// Default Center (Bangladesh)
+const defaultPosition = [23.6850, 90.3563]; 
+const defaultZoom = 7;
 
-// Custom Marker Icon
-const customIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', // Professional Map Pin
-    iconSize: [35, 35],
-    iconAnchor: [17, 35],
-    popupAnchor: [0, -30]
+// --- ICONS ---
+// 1. Main District Icon (Red/Large)
+const districtIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    shadowSize: [41, 41]
 });
 
-// Component to handle map movement
+// 2. Covered Area Icon (Blue/Small)
+const areaIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+    iconSize: [18, 30], // Smaller
+    iconAnchor: [9, 30],
+    popupAnchor: [1, -24],
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    shadowSize: [30, 30]
+});
+
+// Helper: Map Movement Logic
 function MapController({ activeDistrict }) {
     const map = useMap();
 
     useEffect(() => {
-        if (activeDistrict) {
+        if (activeDistrict && activeDistrict.latitude && activeDistrict.longitude) {
+            // Zoom in closer (11) to see the spread of sub-areas
             map.flyTo(
                 [activeDistrict.latitude, activeDistrict.longitude], 
-                10, 
+                11, 
                 { duration: 1.5 }
             );
+        } else {
+            // Zoom out if nothing selected
+            map.flyTo(defaultPosition, defaultZoom, { duration: 1.5 });
         }
     }, [activeDistrict, map]);
 
@@ -35,51 +53,86 @@ const BangladeshMap = ({ serviceCenters, activeDistrict }) => {
     const mapRef = useRef(null);
 
     return (
-        <div className="h-full w-full z-0">
+        <div className="h-full w-full z-0 relative">
             <MapContainer 
                 center={defaultPosition} 
-                zoom={7} 
+                zoom={defaultZoom} 
                 scrollWheelZoom={true} 
                 className="h-full w-full"
                 ref={mapRef}
+                zoomControl={false}
             >
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" // Professional lighter map theme
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 />
 
                 <MapController activeDistrict={activeDistrict} />
 
-                {serviceCenters.map((center, index) => {
-                    // Check if this marker is the active one
+                {serviceCenters.map((center, centerIndex) => {
+                    if (!center.latitude || !center.longitude) return null;
+
                     const isActive = activeDistrict?.district === center.district;
 
                     return (
-                        <Marker
-                            key={index}
-                            position={[center.latitude, center.longitude]}
-                            icon={customIcon}
-                            eventHandlers={{
-                                click: () => {
-                                    // Optional: You could trigger parent state update here if needed
-                                },
-                            }}
-                        >
-                            <Popup className="custom-popup">
-                                <div className="p-1 min-w-[150px]">
-                                    <h3 className="font-bold text-slate-800 text-base mb-1">{center.district}</h3>
-                                    <p className="text-xs text-gray-500 mb-2">Service Hub Active</p>
-                                    <div className="border-t pt-2 mt-1">
-                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                                            {center.covered_area.length} Areas
-                                        </span>
+                        <div key={centerIndex}>
+                            {/* 1. MAIN DISTRICT MARKER */}
+                            <Marker
+                                position={[center.latitude, center.longitude]}
+                                icon={districtIcon}
+                                zIndexOffset={1000} // Always on top
+                            >
+                                <Popup>
+                                    <div className="text-center">
+                                        <h3 className="font-bold text-red-600 text-sm">{center.district} (Hub)</h3>
+                                        <p className="text-xs text-slate-500">Main Distribution Center</p>
                                     </div>
-                                </div>
-                            </Popup>
-                        </Marker>
+                                </Popup>
+                            </Marker>
+
+                            {/* 2. SUB-AREA MARKERS (Calculated Positions) */}
+                            {center.covered_area.map((areaName, areaIndex) => {
+                                // MATHEMATICALLY GENERATE POSITIONS
+                                // We arrange them in a circle around the district
+                                const totalPoints = center.covered_area.length;
+                                const radius = 0.06; // Spread distance (~6-7km)
+                                const angle = (areaIndex / totalPoints) * (2 * Math.PI); // Angle in radians
+                                
+                                const areaLat = center.latitude + (radius * Math.cos(angle));
+                                const areaLng = center.longitude + (radius * Math.sin(angle));
+
+                                return (
+                                    <Marker
+                                        key={`${center.district}-${areaName}`}
+                                        position={[areaLat, areaLng]}
+                                        icon={areaIcon}
+                                        opacity={isActive ? 1 : 0.6} // Fade others if specific district selected
+                                    >
+                                        <Popup>
+                                            <div className="text-center">
+                                                <h4 className="font-bold text-blue-600 text-xs">{areaName}</h4>
+                                                <p className="text-[10px] text-slate-400">Coverage Zone</p>
+                                            </div>
+                                        </Popup>
+                                    </Marker>
+                                );
+                            })}
+                        </div>
                     );
                 })}
             </MapContainer>
+            
+            {/* Legend */}
+            <div className="absolute bottom-4 left-4 z-[400] bg-white/90 backdrop-blur p-3 rounded-xl shadow-lg border border-white/50 text-xs">
+                <div className="flex items-center gap-2 mb-1">
+                    <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png" className="h-4" alt="Hub"/>
+                    <span className="font-bold text-slate-700">Main Hubs</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png" className="h-4" alt="Area"/>
+                    <span className="font-bold text-slate-500">Coverage Areas</span>
+                </div>
+            </div>
         </div>
     );
 };

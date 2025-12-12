@@ -5,6 +5,7 @@ import riderImg from '../../assets/riderimage.jpg';
 import { FaClock, FaWallet, FaMapMarkedAlt, FaArrowRight, FaCheckCircle } from 'react-icons/fa';
 
 const BeARider = () => {
+    document.title = "Be A Rider | PickOnGo";
     // Animation variants for staggered reveal
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -48,12 +49,12 @@ const BeARider = () => {
                             <span className="text-[#CAEB66] font-semibold text-sm tracking-wide uppercase">Now Hiring</span>
                         </div>
                         
-                        <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
+                        <h1 className="text-4xl 2xl:text-6xl font-extrabold mb-6 leading-tight">
                             Drive Your Way to <br/>
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#CAEB66] to-green-400">Financial Freedom</span>
                         </h1>
                         
-                        <p className="text-slate-300 mb-8 text-lg md:text-xl leading-relaxed max-w-lg mx-auto md:mx-0">
+                        <p className="text-slate-300 mb-8 text-md md:text-xl leading-relaxed max-w-lg mx-auto md:mx-0">
                             Join the fastest-growing logistics network. Set your own hours, keep 100% of your tips, and get paid weekly.
                         </p>
                         
@@ -62,12 +63,12 @@ const BeARider = () => {
                                 <motion.button 
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
-                                    className="px-8 py-4 bg-[#CAEB66] text-slate-900 text-lg font-bold rounded-full shadow-[0_0_20px_rgba(202,235,102,0.4)] hover:shadow-[0_0_30px_rgba(202,235,102,0.6)] transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+                                    className="2xl:px-8 2xl:py-4 px-4 py-2 cursor-pointer bg-[#CAEB66] text-slate-900 text-lg font-bold rounded-full shadow-[0_0_20px_rgba(202,235,102,0.4)] hover:shadow-[0_0_30px_rgba(202,235,102,0.6)] transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                                 >
                                     Apply Now <FaArrowRight />
                                 </motion.button>
                             </Link>
-                            <button className="px-8 py-4 bg-transparent border border-slate-600 text-white hover:bg-white/10 text-lg font-semibold rounded-full transition-all w-full sm:w-auto">
+                            <button className="2xl:px-8 2xl:py-4 px-4 py-2 cursor-pointer bg-transparent border border-slate-600 text-white hover:bg-white/10 text-lg font-semibold rounded-full transition-all w-full sm:w-auto">
                                 Learn More
                             </button>
                         </div>
@@ -88,7 +89,7 @@ const BeARider = () => {
                             <img 
                                 src={riderImg} 
                                 alt="Rider" 
-                                className="w-full max-w-[500px] mx-auto rounded-3xl shadow-2xl border-4 border-white/10"
+                                className="w-full max-w-[350px] 2xl:max-w-[500px] mx-auto rounded-3xl shadow-2xl border-4 border-white/10"
                             />
                             
                             {/* Floating Stats Card */}
@@ -98,7 +99,7 @@ const BeARider = () => {
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-500 font-bold uppercase">Avg. Weekly Earning</p>
-                                    <p className="text-xl font-bold text-slate-900">$500+</p>
+                                    <p className="2xl:text-xl  text-md font-bold text-slate-900">$500+</p>
                                 </div>
                             </div>
                         </motion.div>

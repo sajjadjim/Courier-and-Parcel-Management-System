@@ -1,104 +1,178 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import BangladeshMap from './BangladeshMap';
 import { useLoaderData } from 'react-router';
-import { FaMapMarkedAlt, FaSearch, FaLocationArrow } from 'react-icons/fa';
+import { FaMapMarkedAlt, FaSearch, FaMapMarkerAlt, FaGlobeAsia, FaArrowLeft } from 'react-icons/fa';
 
 const Coverage = () => {
-    const serviceCenters = useLoaderData();
-    const [selectedDistrict, setSelectedDistrict] = useState(null);
-    const [searchText, setSearchText] = useState('');
 
-    // Filter list based on search
-    const filteredCenters = serviceCenters.filter(center => 
-        center.district.toLowerCase().includes(searchText.toLowerCase())
-    );
+    document.title = "Coverage Area | PickOnGo";
+    const serviceCenters = useLoaderData(); 
+    const [selectedDivision, setSelectedDivision] = useState(''); // Default is empty
+    const [selectedDistrict, setSelectedDistrict] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // 1. Get Unique Divisions
+    const divisions = useMemo(() => {
+        const unique = [...new Set(serviceCenters.map(item => item.region))];
+        return unique.sort();
+    }, [serviceCenters]);
+
+    // 2. Filter Districts based on Division & Search
+    const filteredDistricts = useMemo(() => {
+        // REQUIREMENT: If no division is selected, show nothing
+        if (!selectedDivision) return [];
+
+        return serviceCenters.filter(center => {
+            const matchesDivision = center.region === selectedDivision;
+            const matchesSearch = center.district.toLowerCase().includes(searchTerm.toLowerCase());
+            return matchesDivision && matchesSearch;
+        });
+    }, [serviceCenters, selectedDivision, searchTerm]);
 
     return (
-        <div className="min-h-screen  bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+            
             {/* Header Section */}
-            <div className="bg-slate-900 pt-30 text-white py-12 px-6 text-center shadow-md">
-                <h1 className="text-4xl font-extrabold mb-2 flex justify-center items-center gap-3">
-                    <FaMapMarkedAlt className="text-blue-500" /> Nationwide Coverage
-                </h1>
-                <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-                    We deliver happiness to 64 districts across Bangladesh. Find your nearest service point below.
-                </p>
+            <div className="bg-slate-900 text-white py-10 px-6 text-center shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#CAEB66] rounded-full blur-[100px] opacity-10 translate-y-1/2 -translate-x-1/2"></div>
+
+                <div className="relative z-10">
+                    <h1 className="text-3xl md:text-4xl font-extrabold mb-3 flex justify-center items-center gap-3">
+                        <FaMapMarkedAlt className="text-blue-500" /> Nationwide Coverage
+                    </h1>
+                    <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto">
+                        Delivering happiness to 64 districts. Select a division to find your hub.
+                    </p>
+                </div>
             </div>
 
             {/* Content Grid */}
-            <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 h-[80vh]">
+            <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)]">
                 
-                {/* LEFT SIDEBAR: Search & List */}
-                <div className="lg:col-span-4 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-full">
+                {/* LEFT SIDEBAR: Filters & List */}
+                <div className="lg:col-span-4 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col h-full">
                     
-                    {/* Search Bar */}
-                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                    {/* Filters Header */}
+                    <div className="p-5 border-b border-gray-100 bg-gray-50 space-y-3">
+                        
+                        {/* Division Dropdown (Primary Action) */}
                         <div className="relative">
+                            <FaGlobeAsia className="absolute left-3.5 top-3 text-gray-500 z-10" />
+                            <select
+                                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-blue-500 bg-white text-sm outline-none cursor-pointer appearance-none text-slate-800 font-bold shadow-sm"
+                                value={selectedDivision}
+                                onChange={(e) => {
+                                    setSelectedDivision(e.target.value);
+                                    setSelectedDistrict(null); // Reset map zoom when division changes
+                                }}
+                            >
+                                <option value="" disabled>Select a Division</option>
+                                {divisions.map((div, idx) => (
+                                    <option key={idx} value={div}>
+                                        {div} Division
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-3 top-3.5 pointer-events-none text-gray-400 text-xs">▼</div>
+                        </div>
+
+                        {/* Search Input (Only enabled if division selected) */}
+                        <div className={`relative transition-opacity duration-300 ${!selectedDivision ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                             <input
                                 type="text"
-                                placeholder="Search your district..."
-                                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm"
-                                value={searchText}
-                                onChange={(e) => setSearchText(e.target.value)}
+                                placeholder="Search District in Division..."
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm transition-all"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                disabled={!selectedDivision}
                             />
-                            <FaSearch className="absolute left-3.5 top-3.5 text-gray-400" />
+                            <FaSearch className="absolute left-3.5 top-3 text-gray-400" />
                         </div>
                     </div>
 
-                    {/* District List */}
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                        {filteredCenters.map((center, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setSelectedDistrict(center)}
-                                className={`w-full text-left p-4 rounded-xl transition-all duration-200 flex items-start justify-between group
-                                    ${selectedDistrict?.district === center.district 
-                                        ? "bg-blue-600 text-white shadow-md shadow-blue-200" 
-                                        : "hover:bg-gray-50 text-gray-700"}`}
-                            >
-                                <div>
-                                    <h3 className={`font-bold text-sm mb-1 ${selectedDistrict?.district === center.district ? "text-white" : "text-slate-800"}`}>
-                                        {center.district}
-                                    </h3>
-                                    <p className={`text-xs truncate max-w-[200px] ${selectedDistrict?.district === center.district ? "text-blue-100" : "text-gray-400"}`}>
-                                        {center.covered_area.length} areas covered
-                                    </p>
-                                </div>
-                                <FaLocationArrow className={`mt-1 transform group-hover:translate-x-1 transition-transform ${selectedDistrict?.district === center.district ? "text-blue-200" : "text-gray-300"}`} size={12} />
-                            </button>
-                        ))}
-                        
-                        {filteredCenters.length === 0 && (
-                            <div className="text-center py-10 text-gray-400">
-                                No districts found.
+                    {/* District List Area */}
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar bg-slate-50/30">
+                        {!selectedDivision ? (
+                            // INITIAL STATE: Prompt user to select division
+                            <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-400">
+                                <FaGlobeAsia className="text-4xl mb-3 text-gray-300" />
+                                <p className="font-semibold text-gray-600">No Division Selected</p>
+                                <p className="text-xs mt-1">Please select a division from the dropdown above to view available districts.</p>
                             </div>
+                        ) : filteredDistricts.length === 0 ? (
+                            // EMPTY SEARCH STATE
+                            <div className="text-center py-12 flex flex-col items-center text-gray-400">
+                                <FaSearch className="text-3xl mb-2 opacity-20" />
+                                <p className="text-sm">No districts found matching "{searchTerm}".</p>
+                            </div>
+                        ) : (
+                            // LIST STATE
+                            filteredDistricts.map((center, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setSelectedDistrict(center)}
+                                    className={`w-full text-left p-3 md:p-4 rounded-xl transition-all duration-200 flex items-center justify-between group border border-transparent
+                                        ${selectedDistrict?.district === center.district 
+                                            ? "bg-blue-600 text-white shadow-md shadow-blue-200 border-blue-500" 
+                                            : "hover:bg-white hover:shadow-sm hover:border-gray-200 text-gray-700"}`}
+                                >
+                                    <div>
+                                        <h3 className={`font-bold text-sm ${selectedDistrict?.district === center.district ? "text-white" : "text-slate-800"}`}>
+                                            {center.district}
+                                        </h3>
+                                        <p className={`text-[10px] uppercase font-semibold tracking-wide ${selectedDistrict?.district === center.district ? "text-blue-200" : "text-gray-400"}`}>
+                                            {center.covered_area.length} Areas Covered
+                                        </p>
+                                    </div>
+                                    <div className={`p-2 rounded-full ${selectedDistrict?.district === center.district ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500"}`}>
+                                        <FaMapMarkerAlt size={14} />
+                                    </div>
+                                </button>
+                            ))
                         )}
                     </div>
+                    
+                    {/* Footer Status */}
+                    {selectedDivision && (
+                        <div className="p-3 bg-gray-50 border-t border-gray-100 text-center text-xs text-gray-400 font-medium">
+                            Found {filteredDistricts.length} Locations in {selectedDivision}
+                        </div>
+                    )}
                 </div>
 
-                {/* RIGHT SIDE: Map */}
-                <div className="lg:col-span-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden relative">
+                {/* RIGHT: Map Container */}
+                <div className="lg:col-span-8 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden relative h-[500px] lg:h-full">
                     <BangladeshMap 
                         serviceCenters={serviceCenters} 
                         activeDistrict={selectedDistrict} 
                     />
                     
-                    {/* Overlay Info Card (Shows when a district is selected) */}
+                    {/* Floating Info Card */}
                     {selectedDistrict && (
-                        <div className="absolute top-4 right-4 z-[1000] bg-white/90 backdrop-blur-md p-5 rounded-xl shadow-xl border border-white/50 max-w-xs animate-fadeIn">
-                            <h3 className="font-bold text-slate-800 text-lg mb-2">{selectedDistrict.district}</h3>
-                            <p className="text-xs text-gray-500 font-bold uppercase mb-2">Covered Areas:</p>
-                            <div className="flex flex-wrap gap-1">
-                                {selectedDistrict.covered_area.slice(0, 5).map((area, i) => (
-                                    <span key={i} className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md border border-blue-100">
+                        <div className="absolute bottom-6 left-6 right-6 md:right-auto md:w-80 z-[1000] bg-white/95 backdrop-blur-xl p-5 rounded-2xl shadow-2xl border border-white/50 animate-slideUp">
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-xl">{selectedDistrict.district}</h3>
+                                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wide">
+                                        {selectedDistrict.region}
+                                    </span>
+                                </div>
+                                <button 
+                                    onClick={() => setSelectedDistrict(null)}
+                                    className="text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            
+                            <p className="text-xs text-gray-500 font-bold uppercase mb-2">Covered Zones:</p>
+                            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+                                {selectedDistrict.covered_area.map((area, i) => (
+                                    <span key={i} className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded border border-slate-200">
                                         {area}
                                     </span>
                                 ))}
-                                {selectedDistrict.covered_area.length > 5 && (
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-500 text-[10px] rounded-md">
-                                        +{selectedDistrict.covered_area.length - 5} more
-                                    </span>
-                                )}
                             </div>
                         </div>
                     )}

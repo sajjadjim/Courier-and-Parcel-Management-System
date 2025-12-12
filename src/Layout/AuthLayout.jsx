@@ -1,6 +1,5 @@
 import React from 'react';
 import { Outlet } from 'react-router';
-import AUthPicture from '../../public/authImage.png'
 import FastestDelivarylogo from '../Shared/WebsiteLogo/FastestDelivarylogo';
 
 const AuthLayout = () => {
