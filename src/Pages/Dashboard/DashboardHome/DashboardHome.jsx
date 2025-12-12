@@ -1,5 +1,5 @@
 import React from 'react';
-import Loading from '../../../components/Loading';
+import Loading from '../../../Components/Loading';
 import UserDashboard from './UserDashboard';
 import RiderDashboard from './RiderDashboard';
 import AdminDashboard from './AdminDashboard';
