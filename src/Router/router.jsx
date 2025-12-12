@@ -18,7 +18,6 @@ import BeARider from "../Pages/Be A Raider/BeARider";
 import RiderForm from "../Pages/Be A Raider/Rider_Form/RiderForm";
 import Active_riders from "../Pages/Dashboard/Active Riders/Active_riders";
 import Pending_Riders from "../Pages/Dashboard/Pending Riders/Pending_Riders";
-import Track_pacakage from "../Pages/Dashboard/Track Pacakage/Track_pacakage";
 import MakeAdmin from "../Pages/Dashboard/MakeAdmin/MakeAdmin";
 import AdminRoute from "../Routers/AdminRoute";
 import Forbidden from "../Pages/Forbidden Access/Forbidden";
@@ -30,6 +29,9 @@ import MyEarning from "../Pages/Dashboard/Rider Elements/My Earning/MyEarning";
 import DashboardHome from "../Pages/Dashboard/DashboardHome/DashboardHome";
 import ProfileUpdate from "../Pages/Dashboard/user/ProfileUpdate";
 import AllFaQ from "../Pages/Home/FaQ/AllFaQ";
+import Track_parcel from "../Pages/Dashboard/user/tracking_parcel/Track_parcel";
+import Deactive_riders from "../Pages/Dashboard/Deactivate Riders/Deactivate_riders";
+
 
 
 
@@ -121,10 +123,6 @@ const router = createBrowserRouter([
         element: <AdminRoute> <Pending_Riders></Pending_Riders></AdminRoute>
       },
       {
-        path:'track-package',
-        Component: Track_pacakage
-      },
-      {
         path:'make-admin',
         element: <AdminRoute><MakeAdmin></MakeAdmin></AdminRoute>
       },
@@ -147,6 +145,14 @@ const router = createBrowserRouter([
       {
         path:'update-profile',
         element:<PrivateRoute><ProfileUpdate></ProfileUpdate></PrivateRoute>
+      },
+      {
+        path:'track_parcel',
+        Component : Track_parcel
+      },
+      {
+        path:'deactive_riders',
+        element: <AdminRoute><Deactive_riders></Deactive_riders></AdminRoute>
       }
     ]
   }

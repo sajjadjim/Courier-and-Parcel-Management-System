@@ -1,183 +1,214 @@
+import React, { useState, useContext } from 'react';
 import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { useQuery } from '@tanstack/react-query';
-import React from 'react';
-import { useParams } from 'react-router';
-import UseAxiosSecure from '../../../Hooks/UseAxiosSecure';
-import { use } from 'react';
-import { AuthContext } from '../../../Context/AuthContext';
+import { useParams, useNavigate } from 'react-router'; 
 import Swal from 'sweetalert2';
-import { useNavigate } from 'react-router';
+
+import UseAxiosSecure from '../../../Hooks/UseAxiosSecure';
+import { AuthContext } from '../../../Context/AuthContext';
 import useTrackingLogger from '../../../Hooks/useTrackingLogger';
 
 const PaymentForm = () => {
-
-    const { user } = use(AuthContext)
-    const {logTracking} = useTrackingLogger();
+    const { user } = useContext(AuthContext);
+    const { logTracking } = useTrackingLogger();
     const navigate = useNavigate();
-    const axiosSecure = UseAxiosSecure()
+    const axiosSecure = UseAxiosSecure();
 
-    // taken from react stripe docs 
-    const stripe = useStripe()
-    const elements = useElements()
+    const stripe = useStripe();
+    const elements = useElements();
 
     const { parcelId } = useParams();
+    const [error, setError] = useState(""); 
+    const [processing, setProcessing] = useState(false); 
 
-
-    // Data tank using TransSteck query 
-    const { data: parcelPaymentInfo } = useQuery({
+    // 1. Fetch Parcel Data
+    const { data: parcelPaymentInfo, isLoading } = useQuery({
         queryKey: ['parcel', parcelId],
         queryFn: async () => {
-            const res = await axiosSecure(`parcels/${parcelId}`)
-            return res.data
+            const res = await axiosSecure.get(`/parcels/${parcelId}`);
+            return res.data;
         }
-    })
+    });
 
-    // console.log(parcelPaymentInfo)
-    const amount = parcelPaymentInfo?.deliveryCharge.amount;
-    const amountInCents = amount * 100; // Convert to cents for Stripe
-    // console.log("Amount in Cents", amountInCents)
+    // Safely get amount
+    const rawAmount = parcelPaymentInfo?.deliveryCharge?.amount;
+    const amount = rawAmount ? parseFloat(rawAmount) : 0; // Ensure it's a number
 
-
-    // control here the form submit button data for payment method system 
+    // 2. Handle Submit
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // if your have don't payment elements your can not payment  if user have don't payment elements then return
-        if (!stripe || !elements)
+        // 🛑 CRITICAL SAFETY CHECK
+        if (!stripe || !elements) return;
+        
+        if (!amount || amount <= 0) {
+            setError("Invalid payment amount. Cannot process 0 or empty fee.");
             return;
+        }
 
         const card = elements.getElement(CardElement);
+        if (!card) return;
 
-        if (!card) {
-            return
-        }
+        setProcessing(true); 
+        setError('');
 
-        // step -1 : Validation the card information 
-        const { erro, paymentMethod } = await stripe.createPaymentMethod({
+        // 🛑 DEBUG: Check exactly what we are sending
+        console.log("🚀 Sending Payment Request. Price:", amount, "Type:", typeof amount);
+
+        // Step A: Create Payment Method (Stripe)
+        const { error: paymentMethodError } = await stripe.createPaymentMethod({
             type: 'card',
             card,
-        })
+        });
 
-        if (erro) {
-            console.log(erro)
+        if (paymentMethodError) {
+            setError(paymentMethodError.message);
+            setProcessing(false);
+            return;
         }
-        else {
-            console.log("Payment method", paymentMethod)
-            // step-2 : Payment intent creation
-        const res = await axiosSecure.post('/create-payment-intent', {
-            amountInCents,
-            parcelId
-        });
-        // console.log("Intent send Backend ", res)
 
-        const clientSecret = res.data.clientSecret;
+        try {
+            // Step B: Get Client Secret from Backend
+            // ✅ FIX: Ensure price is a clean number
+            const res = await axiosSecure.post('/payments/create-payment-intent', {
+                price: Number(amount) 
+            });
 
-        // step-3: confirm payment
-        const result = await stripe.confirmCardPayment(clientSecret, {
-            payment_method: {
-                card: elements.getElement(CardElement),
-                billing_details: {
-                    name: user.displayName,
-                    email: user.email
+            console.log("✅ Client Secret Received");
+            const clientSecret = res.data.clientSecret;
+
+            // Step C: Confirm Payment
+            const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: card,
+                    billing_details: {
+                        name: user?.displayName || 'Anonymous',
+                        email: user?.email || 'unknown@example.com'
+                    },
                 },
-            },
-        });
-        // AFter payment done show the massage 
-        if (result.error) {
-            setError(result.error.message);
-        } else {
-            setError('');
-            if (result.paymentIntent.status === 'succeeded') {
-                console.log('Payment succeeded Done ✅!');
-                // console.log(result)
-                // payment data on the store and history that show the payment success message
-                const paymentData = {
-                    parcelId,
-                    parcelName: parcelPaymentInfo?.parcelName,
-                    email: user.email,
-                    amount: amount,
-                    transactionId: result.paymentIntent.id,
-                    paymentMethod: result.paymentIntent.payment_method_types?.[0] || result.type,
-                }
-                // console.log(paymentData)
-                const paymentRes = await axiosSecure.post('/payments', paymentData);
-                console.log("Payment data send to backend", paymentRes.data);
-                if(paymentRes.data.insertedId) {
-                    // ✅ Show SweetAlert with transaction ID
-                        await Swal.fire({
-                            icon: 'success',
-                            title: 'Payment Successful!',
-                            html: `<strong>Transaction ID:</strong> <code>${paymentData.transactionId}</code>`,
-                            confirmButtonText: 'Go to My Parcels',
+            });
+
+            if (confirmError) {
+                setError(confirmError.message);
+                setProcessing(false);
+            } else {
+                if (paymentIntent.status === 'succeeded') {
+                    console.log('✅ Payment Succeeded:', paymentIntent.id);
+
+                    // Step D: Save Info to Database
+                    const paymentData = {
+                        parcelId,
+                        parcelName: parcelPaymentInfo?.parcelName,
+                        email: user.email,
+                        amount: amount,
+                        transactionId: paymentIntent.id,
+                        date: new Date(), 
+                        status: 'success',
+                        paymentMethod: 'card',
+                    };
+
+                    const paymentRes = await axiosSecure.post('/payments', paymentData);
+
+                    if (paymentRes.data.insertedId || paymentRes.data.paymentResult?.insertedId) {
+                        
+                        // Update Status
+                        await axiosSecure.patch(`/parcels/${parcelId}/payment-status`, { 
+                             payment_status: 'paid' 
                         });
 
-                         await logTracking({
-                        trackingId: parcelPaymentInfo.trackingId,
-                        status: "Payment Done",
-                        details: `Created by ${user.displayName}`,
-                        updated_by: user.email,
-                    });
+                        // Log Tracking
+                        await logTracking({
+                            trackingId: parcelPaymentInfo.trackingId,
+                            status: "paid", 
+                            details: `Payment successful. ID: ${paymentIntent.id}`,
+                            updated_by: user.email,
+                        });
 
-                        // ✅ Redirect to /myParcels
-                        navigate('/dashboard/myParcels');
-                    // Optionally, redirect or update UI here
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Payment Successful!',
+                            text: `Transaction ID: ${paymentIntent.id}`,
+                            showConfirmButton: false, 
+                            timer: 2000 
+                        });
+
+                        setTimeout(() => {
+                            navigate('/dashboard/myParcels');
+                        }, 2000);
+                    }
                 }
             }
+        } catch (err) {
+            console.error("❌ Payment Error:", err.response?.data || err.message);
+            setError(err.response?.data?.error || "An error occurred during payment.");
+            setProcessing(false);
         }
-        }
+    };
 
+    if (isLoading || !parcelPaymentInfo) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <span className="loading loading-spinner loading-lg text-blue-600"></span>
+            </div>
+        );
     }
-    // State for error message
-    const [error, setError] = React.useState("");
 
     return (
-        <div className="max-w-md mx-auto p-6">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-8 bg-white shadow-xl rounded-xl p-8">
-                <h2 className="text-2xl font-bold text-center mb-6 text-blue-700">Payment Details</h2>
-                <div className="space-y-4">
-                    <label className="block">
-                        <span className="text-gray-700 font-semibold">Card Information</span>
-                        <div className="mt-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-4 focus-within:border-blue-500 transition-all
-                            md:w-[420px] md:max-w-full">
-                            <CardElement
-                                options={{
-                                    style: {
-                                        base: {
-                                            fontSize: "17px",
-                                            color: "#1e293b",
-                                            letterSpacing: "0.025em",
-                                            "::placeholder": { color: "#94a3b8" },
-                                            fontFamily: "inherit",
-                                            backgroundColor: "#f8fafc",
-                                            padding: "10px 0"
-                                        },
-                                        invalid: { color: "#ef4444" }
-                                    },
-                                    hidePostalCode: true,
-                                }}
-                                className="bg-transparent"
-                                onChange={e => setError(e.error ? e.error.message : "")}
-                            />
-                        </div>
-                    </label>
-                    {error && (
-                        <div className="text-red-500 text-sm font-medium mt-1">{error}</div>
-                    )}
-                    <div className="flex items-center gap-3 mt-2">
-                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium">Visa</span>
-                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium">Mastercard</span>
-                    </div>
+        <div className="max-w-md mx-auto p-6 mt-10">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6 bg-white shadow-2xl rounded-2xl p-8 border border-gray-100">
+                
+                <div className="text-center mb-2">
+                    <h2 className="text-2xl font-extrabold text-slate-800">Secure Payment</h2>
+                    <p className="text-sm text-gray-500 mt-1">Complete your transaction securely</p>
                 </div>
+
+                <div className="bg-blue-50 p-4 rounded-xl text-center border border-blue-100">
+                    <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">Total Amount</p>
+                    <p className="text-3xl font-extrabold text-slate-800 mt-1">৳{amount}</p>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-600 ml-1">Card Details</label>
+                    <div className="rounded-xl border border-gray-300 bg-gray-50 px-4 py-3.5 transition-all focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 focus-within:bg-white">
+                        <CardElement
+                            options={{
+                                style: {
+                                    base: {
+                                        fontSize: "16px",
+                                        color: "#1e293b",
+                                        "::placeholder": { color: "#94a3b8" },
+                                        fontFamily: "inherit",
+                                    },
+                                    invalid: { color: "#ef4444" }
+                                },
+                                hidePostalCode: true,
+                            }}
+                            onChange={e => setError(e.error ? e.error.message : "")}
+                        />
+                    </div>
+                    {error && <p className="text-red-500 text-xs font-semibold ml-1">{error}</p>}
+                </div>
+
                 <button
                     type='submit'
-                    disabled={!stripe}
-                    className={`w-full cursor-pointer py-3 btn-primary text-gray-600 rounded-lg font-bold text-lg shadow-md transition-all ${!stripe ? "opacity-50 cursor-not-allowed" : "hover:from-blue-700 hover:to-blue-600"
+                    disabled={!stripe || !amount || processing}
+                    className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-95 flex justify-center items-center gap-2
+                        ${!stripe || processing || !amount
+                            ? "bg-gray-400 cursor-not-allowed" 
+                            : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-blue-200"
                         }`}
                 >
-                    Pay {amount ? `$${amount}` : "0.00"}
+                    {processing ? (
+                        <span className="loading loading-spinner loading-sm"></span>
+                    ) : (
+                        `Pay ৳${amount}`
+                    )}
                 </button>
-                <div className="text-xs text-gray-400 text-center mt-2">
-                    Your payment is secure and encrypted.
+
+                <div className="flex justify-center items-center gap-4 opacity-50 mt-2 grayscale hover:grayscale-0 transition-all">
+                    <img src="https://img.icons8.com/color/48/visa.png" alt="Visa" className="h-6" />
+                    <img src="https://img.icons8.com/color/48/mastercard.png" alt="Mastercard" className="h-6" />
+                    <img src="https://img.icons8.com/color/48/amex.png" alt="Amex" className="h-6" />
                 </div>
             </form>
         </div>

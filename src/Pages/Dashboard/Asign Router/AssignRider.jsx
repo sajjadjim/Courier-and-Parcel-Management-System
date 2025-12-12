@@ -12,18 +12,19 @@ const AssignRider = () => {
     const [riders, setRiders] = useState([]);
     const [loadingRiders, setLoadingRiders] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [searchLocation, setSearchLocation] = useState(""); // To show in modal header
+    const [searchLocation, setSearchLocation] = useState(""); 
     
     const queryClient = useQueryClient();
     const { logTracking } = useTrackingLogger();
     const { user } = use(AuthContext);
 
-    // 1. Fetch Parcels (Paid & Not Collected)
+    // 1. Fetch Parcels (Paid & Pending)
     const { data: parcels = [], isLoading } = useQuery({
         queryKey: ["assignableParcels"],
         queryFn: async () => {
+            // ✅ FIX: Changed 'not_collected' to 'pending' to match your AddParcel logic
             const res = await axiosSecure.get(
-                "/parcels?payment_status=paid&delivery_status=not_collected"
+                "/parcels?payment_status=paid&delivery_status=pending"
             );
             return res.data.sort(
                 (a, b) => new Date(a.creation_date) - new Date(b.creation_date)
@@ -34,7 +35,7 @@ const AssignRider = () => {
     // 2. Filter Logic for Search Bar
     const filteredParcels = useMemo(() => {
         return parcels.filter(p => 
-            p.trackingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.trackingId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.senderWarehouse?.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [parcels, searchTerm]);
@@ -74,34 +75,28 @@ const AssignRider = () => {
         },
     });
 
-    // ---------------------------------------------------------
     // 4. OPEN MODAL & STRICTLY FILTER RIDERS BY CITY/REGION
-    // ---------------------------------------------------------
     const openAssignModal = async (parcel) => {
         setSelectedParcel(parcel);
         setLoadingRiders(true);
         setRiders([]);
 
-        // Determine the target location from the parcel data
-        // Priority: senderRegion -> senderCity -> senderWarehouse
+        // Determine the target location
         const targetRegion = parcel.senderRegion || parcel.senderCity || parcel.senderWarehouse;
         setSearchLocation(targetRegion);
 
         try {
-            // Fetch ALL active riders (or filter by API if your backend supports regex)
             const res = await axiosSecure.get("/riders/active"); 
 
             // Strict Client-Side Filter
             const matchedRiders = res.data.filter(rider => {
-                // 1. Must be Active
                 if (rider.status !== 'active') return false;
 
-                // 2. Normalize Strings (remove spaces, lowercase)
                 const riderCity = (rider.city || "").toLowerCase().trim();
                 const parcelLocation = (targetRegion || "").toLowerCase().trim();
 
-                // 3. Check for Match
-                return riderCity === parcelLocation;
+                // Relaxed matching (includes instead of exact match to prevent typos issues)
+                return riderCity.includes(parcelLocation) || parcelLocation.includes(riderCity);
             });
             
             setRiders(matchedRiders);
@@ -159,7 +154,7 @@ const AssignRider = () => {
                             <FaBox />
                         </div>
                         <h3 className="text-xl font-bold text-slate-700">No Pending Parcels</h3>
-                        <p className="text-slate-400">All paid parcels have been assigned.</p>
+                        <p className="text-slate-400">All paid parcels have been assigned or none exist.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -192,17 +187,18 @@ const AssignRider = () => {
                                             <div className="flex items-center gap-2 text-sm">
                                                 <div className="text-slate-600 font-medium">
                                                     <span className="text-xs text-slate-400 block uppercase">Sender</span>
-                                                    {parcel.senderRegion || parcel.senderCity || parcel.senderWarehouse}
+                                                    {parcel.senderRegion || parcel.senderCity}
                                                 </div>
                                                 <FaArrowRight className="text-slate-300 mx-2" />
                                                 <div className="text-slate-600 font-medium">
                                                     <span className="text-xs text-slate-400 block uppercase">Receiver</span>
-                                                    {parcel.receiverWarehouse}
+                                                    {parcel.receiverRegion || parcel.receiverCity}
                                                 </div>
                                             </div>
                                         </td>
                                         <td>
-                                            <div className="font-bold text-slate-800">৳ {parcel.deliveryCharge?.charge}</div>
+                                            {/* ✅ FIX: Use 'amount' instead of 'charge' */}
+                                            <div className="font-bold text-slate-800">৳ {parcel.deliveryCharge?.amount || 0}</div>
                                             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
                                                 <FaCalendarAlt />
                                                 {new Date(parcel.date).toLocaleDateString()}

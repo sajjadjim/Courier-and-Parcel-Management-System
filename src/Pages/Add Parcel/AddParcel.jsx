@@ -1,9 +1,9 @@
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useForm } from "react-hook-form";
 import { ToastContainer, toast } from "react-toastify";
 import Modal from "react-modal";
 import "react-toastify/dist/ReactToastify.css";
-import { useLoaderData, useNavigate } from "react-router";
+import { useLoaderData, useNavigate } from "react-router"; 
 import UseAxiosSecure from "../../Hooks/UseAxiosSecure";
 import { AuthContext } from "../../Context/AuthContext";
 import useTrackingLogger from "../../Hooks/useTrackingLogger";
@@ -22,109 +22,146 @@ const generateTrackingID = () => {
 };
 
 const AddParcel = () => {
+    document.title = "Add Parcel | PickOnGo";
 
-    document.title = "Add Parcel | PickOnGo - Fastest Delivery Service";
-
-    const { user } = use(AuthContext);
+    const { user } = useContext(AuthContext);
     const axiosSecure = UseAxiosSecure();
-    const warehouseData = useLoaderData();
+    const warehouseData = useLoaderData(); // The JSON data you provided
     const { logTracking } = useTrackingLogger();
     const navigate = useNavigate();
 
-    const { register, handleSubmit, watch, formState: { errors } } = useForm();
+    const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
 
+    // --- STATES FOR CASCADING DROPDOWNS ---
+    // Sender States
     const [senderRegion, setSenderRegion] = useState("");
-    const [receiverRegion, setReceiverRegion] = useState("");
-    const [senderWarehouses, setSenderWarehouses] = useState([]);
-    const [receiverWarehouses, setReceiverWarehouses] = useState([]);
+    const [senderDistricts, setSenderDistricts] = useState([]);
+    const [senderDistrict, setSenderDistrict] = useState("");
+    const [senderAreas, setSenderAreas] = useState([]);
 
+    // Receiver States
+    const [receiverRegion, setReceiverRegion] = useState("");
+    const [receiverDistricts, setReceiverDistricts] = useState([]);
+    const [receiverDistrict, setReceiverDistrict] = useState("");
+    const [receiverAreas, setReceiverAreas] = useState([]);
+
+    // UI States
     const [modalOpen, setModalOpen] = useState(false);
     const [pendingData, setPendingData] = useState(null);
-    const [calculatedCost, setCalculatedCost] = useState(null);
+    const [calculatedCost, setCalculatedCost] = useState({ amount: 0, label: "Calculating..." });
 
-    // Watch values for live cost calculation
-    const parcelType = watch("parcelType", "document"); // Default to document
+    // Live Watch
+    const parcelType = watch("parcelType", "document");
     const parcelWeight = watch("parcelWeight", 0);
 
-    // Update warehouses when regions change
+    // --- 1. INITIALIZE REGIONS ---
+    const uniqueRegions = [...new Set(warehouseData.map(item => item.region))].sort();
+
+    // --- 2. SENDER LOGIC ---
     useEffect(() => {
-        if (warehouseData) {
-            const filteredSender = warehouseData.filter(
-                (item) => item.region.toLowerCase() === senderRegion.toLowerCase()
-            );
-            setSenderWarehouses(filteredSender.flatMap((item) => item.covered_area));
-
-            const filteredReceiver = warehouseData.filter(
-                (item) => item.region.toLowerCase() === receiverRegion.toLowerCase()
-            );
-            setReceiverWarehouses(filteredReceiver.flatMap((item) => item.covered_area));
+        if (senderRegion) {
+            // Filter districts based on selected Region
+            const districts = warehouseData
+                .filter(item => item.region === senderRegion)
+                .map(item => item.district);
+            setSenderDistricts([...new Set(districts)].sort());
+            setSenderDistrict(""); // Reset district
+            setSenderAreas([]);    // Reset areas
+            setValue("senderCity", ""); // Reset form value
+            setValue("senderWarehouse", ""); // Reset form value
         }
-    }, [senderRegion, receiverRegion, warehouseData]);
+    }, [senderRegion, warehouseData, setValue]);
 
-    // Calculation Logic
-    const calculateDeliveryCost = (type, weight, senderReg, receiverReg) => {
-        const w = parseFloat(weight) || 0;
-        const sReg = senderReg || "";
-        const rReg = receiverReg || "";
-        
-        // Safety check for type
-        const pType = type || "document";
+    useEffect(() => {
+        if (senderDistrict) {
+            // Find specific object to get covered areas
+            const target = warehouseData.find(item => 
+                item.region === senderRegion && item.district === senderDistrict
+            );
+            setSenderAreas(target ? target.covered_area.sort() : []);
+            setValue("senderWarehouse", ""); // Reset area form value
+        }
+    }, [senderDistrict, senderRegion, warehouseData, setValue]);
 
-        const sameRegion = sReg.toLowerCase() === rReg.toLowerCase();
+    // --- 3. RECEIVER LOGIC ---
+    useEffect(() => {
+        if (receiverRegion) {
+            const districts = warehouseData
+                .filter(item => item.region === receiverRegion)
+                .map(item => item.district);
+            setReceiverDistricts([...new Set(districts)].sort());
+            setReceiverDistrict(""); 
+            setReceiverAreas([]);
+            setValue("receiverCity", ""); 
+            setValue("receiverWarehouse", "");
+        }
+    }, [receiverRegion, warehouseData, setValue]);
 
-        if (pType === "document") {
-            return sameRegion
-                ? { amount: 60, label: "Within City" }
-                : { amount: 80, label: "Outside City/District" };
+    useEffect(() => {
+        if (receiverDistrict) {
+            const target = warehouseData.find(item => 
+                item.region === receiverRegion && item.district === receiverDistrict
+            );
+            setReceiverAreas(target ? target.covered_area.sort() : []);
+            setValue("receiverWarehouse", "");
+        }
+    }, [receiverDistrict, receiverRegion, warehouseData, setValue]);
+
+    // --- 4. COST CALCULATION ---
+    useEffect(() => {
+        const w = parseFloat(parcelWeight) || 0;
+        // Cost Logic: Same Region = Cheap, Different Region = Expensive
+        const isSameZone = senderRegion && receiverRegion && (senderRegion === receiverRegion);
+
+        let cost = 0;
+        let label = "";
+
+        if (parcelType === "document") {
+            cost = isSameZone ? 60 : 100;
+            label = isSameZone ? "Same Region (Document)" : "Inter-Region (Document)";
         } else {
-            // Non-document logic
-            if (w <= 3) {
-                return sameRegion
-                    ? { amount: 110, label: "Within City" }
-                    : { amount: 150, label: "Outside City" };
+            // Parcel Logic
+            const baseRate = isSameZone ? 60 : 120;
+            if (w <= 1) {
+                cost = baseRate;
             } else {
-                const extra = (w - 3) * 40;
-                return sameRegion
-                    ? { amount: 110 + extra, label: "Within City" }
-                    : { amount: 150 + extra + 40, label: "Outside City" };
+                // Base for 1kg + 50tk per extra kg
+                cost = baseRate + ((w - 1) * 50);
             }
+            label = isSameZone ? "Same Region (Parcel)" : "Inter-Region (Parcel)";
         }
-    };
+        setCalculatedCost({ amount: Math.round(cost), label });
+    }, [parcelType, parcelWeight, senderRegion, receiverRegion]);
 
-    const liveCost = calculateDeliveryCost(parcelType, parcelWeight, senderRegion, receiverRegion);
-
+    // --- 5. SUBMIT ---
     const onSubmit = (data) => {
-        const cost = calculateDeliveryCost(
-            data.parcelType,
-            data.parcelWeight,
-            data.senderRegion,
-            data.receiverRegion
-        );
         setPendingData(data);
-        setCalculatedCost(cost);
-        setModalOpen(true); 
+        setModalOpen(true);
     };
 
     const confirmSubmit = () => {
-        const data = pendingData;
-        const costObj = calculatedCost;
-        const weight = parseFloat(data.parcelWeight) || 0;
+        const weight = parseFloat(pendingData.parcelWeight) || 0;
         const trackingId = generateTrackingID();
 
         const parcelData = {
-            ...data,
+            ...pendingData,
             email: user.email,
-            payment_status: 'unpaid',
+            payment_status: 'unpaid', // Assuming online payment simulation
             parcelWeight: weight,
-            deliveryCharge: costObj,
+            deliveryCharge: calculatedCost,
             trackingId: trackingId,
             date: new Date().toISOString().split("T")[0],
-            delivery_status: 'not_collected',
+            delivery_status: 'pending',
+            // Explicitly saving structure for tracking
+            senderRegion: senderRegion,
+            senderCity: senderDistrict, 
+            receiverRegion: receiverRegion,
+            receiverCity: receiverDistrict
         };
 
         axiosSecure.post('/parcels', parcelData)
             .then(async (res) => {
-                if (res.data && res.data.insertedId) {
+                if (res.data.insertedId) {
                     toast.success("🎉 Order Placed Successfully!");
                     await logTracking({
                         trackingId: parcelData.trackingId,
@@ -135,222 +172,247 @@ const AddParcel = () => {
                     setTimeout(() => navigate("/dashboard/myParcels"), 1500);
                 }
             })
-            .catch(() => toast.error("❌ Failed to place order."));
-
+            .catch(err => {
+                console.error(err);
+                toast.error("❌ Failed to place order");
+            });
+        
         setModalOpen(false);
-        setPendingData(null);
     };
 
-    // Styling classes
+    // --- STYLES ---
     const inputClass = "w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm text-gray-700 bg-white";
-    const labelClass = "block text-sm font-medium text-gray-600 mb-1";
-    const sectionClass = "bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6";
+    const labelClass = "block text-xs font-bold text-gray-500 uppercase mb-1";
+    const sectionClass = "bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 relative overflow-hidden";
 
     return (
-        <div className="min-h-screen bg-gray-50 mt-20 py-8 px-4 md:px-8">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen bg-slate-50 py-10 px-4 md:px-8 font-sans">
+            <div className="max-w-7xl mx-auto mt-15">
                 
                 {/* Header */}
                 <div className="text-center mb-10">
-                    <h1 className="text-3xl md:text-4xl font-bold text-slate-800 flex items-center justify-center gap-3">
-                        <MdLocalShipping className="text-blue-600" /> Book a New Parcel
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 flex items-center justify-center gap-3">
+                        <MdLocalShipping className="text-blue-600" /> Book a Delivery
                     </h1>
-                    <p className="text-gray-500 mt-2">Fill in the details below to schedule your delivery instantly.</p>
+                    <p className="text-slate-500 mt-2">Fast, secure, and reliable shipping across 64 districts.</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     
-                    {/* LEFT COLUMN: FORM INPUTS (Spans 2 columns) */}
+                    {/* LEFT COLUMN: FORM INPUTS */}
                     <div className="lg:col-span-2 space-y-6">
                         
-                        {/* 1. Parcel Information */}
+                        {/* 1. Parcel Details */}
                         <div className={sectionClass}>
-                            <h3 className="text-lg font-bold text-slate-700 mb-5 flex items-center gap-2 border-b pb-3">
-                                <FaBoxOpen className="text-blue-500" /> Parcel Details
+                            <h3 className="text-lg font-bold text-slate-700 mb-5 border-b pb-3 flex gap-2 items-center">
+                                <FaBoxOpen className="text-blue-500"/> Parcel Information
                             </h3>
 
                             <div className="mb-6">
-                                <label className={labelClass}>Select Parcel Type</label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <label className={`cursor-pointer border rounded-xl p-4 flex items-center gap-4 transition-all ${parcelType === "document" ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500" : "border-gray-200 hover:border-blue-300"}`}>
+                                <label className={labelClass}>Parcel Type</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <label className={`cursor-pointer border rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${parcelType === "document" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 hover:border-blue-300"}`}>
                                         <input type="radio" value="document" {...register("parcelType")} className="hidden" />
-                                        <div className="p-2 bg-white rounded-full text-blue-600 shadow-sm"><FaFileAlt size={20} /></div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Document</p>
-                                            <p className="text-xs text-gray-500">Letters, Files, Papers</p>
-                                        </div>
+                                        <FaFileAlt size={24} />
+                                        <span className="font-bold text-sm">Document</span>
                                     </label>
-
-                                    <label className={`cursor-pointer border rounded-xl p-4 flex items-center gap-4 transition-all ${parcelType === "not-document" ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500" : "border-gray-200 hover:border-blue-300"}`}>
+                                    <label className={`cursor-pointer border rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${parcelType === "not-document" ? "border-orange-500 bg-orange-50 text-orange-700" : "border-gray-200 hover:border-orange-300"}`}>
                                         <input type="radio" value="not-document" {...register("parcelType")} className="hidden" />
-                                        <div className="p-2 bg-white rounded-full text-orange-600 shadow-sm"><FaBoxOpen size={20} /></div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Package / Box</p>
-                                            <p className="text-xs text-gray-500">Electronics, Clothes, Gifts</p>
-                                        </div>
+                                        <FaBoxOpen size={24} />
+                                        <span className="font-bold text-sm">Package</span>
                                     </label>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
-                                    <label className={labelClass}>Parcel Name / Description</label>
-                                    <input type="text" placeholder="E.g. Laptop, Legal Papers" {...register("parcelName", { required: true })} className={inputClass} />
+                                    <label className={labelClass}>Item Description</label>
+                                    <input type="text" placeholder="e.g. Laptop, Clothes" {...register("parcelName", { required: true })} className={inputClass} />
                                 </div>
                                 <div>
-                                    <label className={labelClass}>Weight (kg)</label>
+                                    <label className={labelClass}>Weight (KG)</label>
                                     <div className="relative">
-                                        <input type="number" step="0.1" min="0" placeholder="0.0" {...register("parcelWeight", { required: true })} className={`${inputClass} pl-10`} />
+                                        <input type="number" step="0.5" min="0.5" placeholder="0.5" {...register("parcelWeight", { required: true })} className={`${inputClass} pl-10`} />
                                         <FaWeightHanging className="absolute left-3 top-3.5 text-gray-400" />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 2. Addresses (Sender & Receiver) */}
+                        {/* 2. Addresses Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             
-                            {/* Sender Card */}
+                            {/* SENDER CARD */}
                             <div className={sectionClass}>
-                                <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2">
-                                    <FaMapMarkerAlt className="text-green-500" /> Sender Info
+                                <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                                <h3 className="text-lg font-bold text-slate-700 mb-4 border-b pb-2 flex gap-2 items-center">
+                                    <FaMapMarkerAlt className="text-green-600"/> Sender Info
                                 </h3>
                                 <div className="space-y-4">
                                     <div>
                                         <label className={labelClass}>Name</label>
-                                        <input placeholder="Your Name" defaultValue={user?.displayName} {...register("senderName")} className={inputClass} />
+                                        <input placeholder="Sender Name" defaultValue={user?.displayName} {...register("senderName")} className={inputClass} />
                                     </div>
                                     <div>
                                         <label className={labelClass}>Phone</label>
-                                        <div className="relative">
-                                            <input placeholder="Your Number" {...register("senderContact")} className={`${inputClass} pl-10`} />
-                                            <FaPhoneAlt className="absolute left-3 top-3.5 text-gray-400" size={14} />
-                                        </div>
+                                        <input placeholder="01XXXXXXXXX" {...register("senderContact", {required: true})} className={inputClass} />
                                     </div>
+                                    
+                                    {/* Sender Region */}
                                     <div>
-                                        <label className={labelClass}>Region</label>
-                                        <select className={inputClass} {...register("senderRegion", { onChange: (e) => setSenderRegion(e.target.value) })}>
+                                        <label className={labelClass}>Select Region</label>
+                                        <select 
+                                            className={inputClass} 
+                                            {...register("senderRegion", { required: true })}
+                                            onChange={(e) => {
+                                                setValue("senderRegion", e.target.value);
+                                                setSenderRegion(e.target.value);
+                                            }}
+                                        >
+                                            <option value="">Select Region</option>
+                                            {uniqueRegions.map(r => <option key={r} value={r}>{r}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Sender District */}
+                                    <div>
+                                        <label className={labelClass}>City / District</label>
+                                        <select 
+                                            className={inputClass}
+                                            {...register("senderCity", { required: true })}
+                                            onChange={(e) => {
+                                                setValue("senderCity", e.target.value);
+                                                setSenderDistrict(e.target.value);
+                                            }}
+                                            disabled={!senderRegion}
+                                        >
+                                            <option value="">Select City</option>
+                                            {senderDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Sender Area */}
+                                    <div>
+                                        <label className={labelClass}>Select Area</label>
+                                        <select {...register("senderWarehouse", { required: true })} className={inputClass} disabled={!senderDistrict}>
                                             <option value="">Select Area</option>
-                                            {[...new Set(warehouseData.map((d) => d.region))].map((r) => <option key={r} value={r}>{r}</option>)}
+                                            {senderAreas.map(a => <option key={a} value={a}>{a}</option>)}
                                         </select>
                                     </div>
+
                                     <div>
-                                        <label className={labelClass}>Nearest Warehouse</label>
-                                        <select {...register("senderWarehouse")} className={inputClass}>
-                                            <option value="">Select Warehouse</option>
-                                            {senderWarehouses.map((wh, i) => <option key={i} value={wh}>{wh}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Full Address</label>
-                                        <input placeholder="House, Road, Block" {...register("senderAddress")} className={inputClass} />
+                                        <label className={labelClass}>Detailed Address</label>
+                                        <input placeholder="House No, Road No" {...register("senderAddress")} className={inputClass} />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Receiver Card */}
+                            {/* RECEIVER CARD */}
                             <div className={sectionClass}>
-                                <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2">
-                                    <FaTruck className="text-orange-500" /> Receiver Info
+                                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                                <h3 className="text-lg font-bold text-slate-700 mb-4 border-b pb-2 flex gap-2 items-center">
+                                    <FaTruck className="text-orange-600"/> Receiver Info
                                 </h3>
                                 <div className="space-y-4">
                                     <div>
                                         <label className={labelClass}>Name</label>
-                                        <input placeholder="Receiver Name" {...register("receiverName")} className={inputClass} />
+                                        <input placeholder="Receiver Name" {...register("receiverName", {required: true})} className={inputClass} />
                                     </div>
                                     <div>
                                         <label className={labelClass}>Phone</label>
-                                        <div className="relative">
-                                            <input placeholder="Receiver Number" {...register("receiverContact")} className={`${inputClass} pl-10`} />
-                                            <FaPhoneAlt className="absolute left-3 top-3.5 text-gray-400" size={14} />
-                                        </div>
+                                        <input placeholder="01XXXXXXXXX" {...register("receiverContact", {required: true})} className={inputClass} />
                                     </div>
+                                    
+                                    {/* Receiver Region */}
                                     <div>
-                                        <label className={labelClass}>Region</label>
-                                        <select className={inputClass} {...register("receiverRegion", { onChange: (e) => setReceiverRegion(e.target.value) })}>
+                                        <label className={labelClass}>Select Region</label>
+                                        <select 
+                                            className={inputClass} 
+                                            {...register("receiverRegion", { required: true })}
+                                            onChange={(e) => {
+                                                setValue("receiverRegion", e.target.value);
+                                                setReceiverRegion(e.target.value);
+                                            }}
+                                        >
+                                            <option value="">Select Region</option>
+                                            {uniqueRegions.map(r => <option key={r} value={r}>{r}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Receiver District */}
+                                    <div>
+                                        <label className={labelClass}>City / District</label>
+                                        <select 
+                                            className={inputClass}
+                                            {...register("receiverCity", { required: true })}
+                                            onChange={(e) => {
+                                                setValue("receiverCity", e.target.value);
+                                                setReceiverDistrict(e.target.value);
+                                            }}
+                                            disabled={!receiverRegion}
+                                        >
+                                            <option value="">Select City</option>
+                                            {receiverDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Receiver Area */}
+                                    <div>
+                                        <label className={labelClass}>Select Area</label>
+                                        <select {...register("receiverWarehouse", { required: true })} className={inputClass} disabled={!receiverDistrict}>
                                             <option value="">Select Area</option>
-                                            {[...new Set(warehouseData.map((d) => d.region))].map((r) => <option key={r} value={r}>{r}</option>)}
+                                            {receiverAreas.map(a => <option key={a} value={a}>{a}</option>)}
                                         </select>
                                     </div>
+
                                     <div>
-                                        <label className={labelClass}>Nearest Warehouse</label>
-                                        <select {...register("receiverWarehouse")} className={inputClass}>
-                                            <option value="">Select Warehouse</option>
-                                            {receiverWarehouses.map((wh, i) => <option key={i} value={wh}>{wh}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Full Address</label>
-                                        <input placeholder="House, Road, Block" {...register("receiverAddress")} className={inputClass} />
+                                        <label className={labelClass}>Detailed Address</label>
+                                        <input placeholder="House No, Road No" {...register("receiverAddress")} className={inputClass} />
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Instructions */}
-                        <div className={sectionClass}>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className={labelClass}>Pickup Instructions (Optional)</label>
-                                    <textarea placeholder="E.g. Gate closed, call first..." {...register("pickupInstruction")} className={`${inputClass} h-20 resize-none`} />
-                                </div>
-                                <div>
-                                    <label className={labelClass}>Delivery Instructions (Optional)</label>
-                                    <textarea placeholder="E.g. Leave at reception..." {...register("deliveryInstruction")} className={`${inputClass} h-20 resize-none`} />
-                                </div>
-                             </div>
                         </div>
                     </div>
 
-
-                    {/* RIGHT COLUMN: STICKY COST CALCULATOR (Spans 1 column) */}
+                    {/* RIGHT COLUMN: STICKY COST CALCULATOR */}
                     <div className="lg:col-span-1 lg:sticky lg:top-24 space-y-6">
-                        <div className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
-                            <div className="bg-blue-600 p-5 text-white text-center">
-                                <h2 className="text-xl font-bold uppercase tracking-wider">Estimated Cost</h2>
-                                <p className="opacity-80 text-sm">Based on weight & location</p>
+                        <div className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                            <div className="bg-slate-900 p-6 text-white text-center relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
+                                <p className="text-xs uppercase font-bold tracking-widest text-slate-400 mb-1">Estimated Total</p>
+                                <h1 className="text-5xl font-extrabold text-[#CAEB66]">
+                                    ৳{calculatedCost.amount}
+                                </h1>
+                                <p className="text-sm mt-2 opacity-80">{calculatedCost.label}</p>
                             </div>
-                            <div className="p-6 flex flex-col items-center justify-center space-y-4">
-                                <div className="text-center">
-                                    <p className="text-gray-500 text-sm font-medium uppercase mb-1">Total Delivery Charge</p>
-                                    <h1 className="text-5xl font-extrabold text-slate-800">
-                                        ৳{liveCost.amount}
-                                    </h1>
-                                </div>
-                                
-                                <div className="w-full bg-blue-50 p-4 rounded-xl space-y-2 border border-blue-100">
-                                    <div className="flex justify-between text-sm text-gray-600">
-                                        <span>Type:</span>
-                                        {/* FIX: Add safety check || "" before replace */}
-                                        <span className="font-semibold capitalize">{(parcelType || "").replace("-", " ")}</span>
+                            
+                            <div className="p-6 space-y-4">
+                                <div className="bg-slate-50 p-4 rounded-xl space-y-2 text-sm text-slate-600 border border-slate-100">
+                                    <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+                                        <span className="font-medium">Weight:</span> <strong>{parcelWeight} KG</strong>
                                     </div>
-                                    <div className="flex justify-between text-sm text-gray-600">
-                                        <span>Weight:</span>
-                                        <span className="font-semibold">{parcelWeight} kg</span>
+                                    <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+                                        <span className="font-medium">From:</span> 
+                                        <span className="text-right truncate w-32">{senderDistrict || "..."}</span>
                                     </div>
-                                    <div className="flex justify-between text-sm text-gray-600">
-                                        <span>Zone:</span>
-                                        <span className={`font-semibold px-2 py-0.5 rounded text-xs ${liveCost.label === "Within City" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
-                                            {liveCost.label}
-                                        </span>
+                                    <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+                                        <span className="font-medium">To:</span> 
+                                        <span className="text-right truncate w-32">{receiverDistrict || "..."}</span>
+                                    </div>
+                                    <div className="flex justify-between pt-1">
+                                        <span className="font-medium">Payment:</span> <span className="badge badge-success text-white badge-sm">Pending</span>
                                     </div>
                                 </div>
 
-                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-                                    Book Delivery <FaTruck />
+                                <button type="submit" className="w-full btn bg-blue-600 hover:bg-blue-700 text-white border-none rounded-xl shadow-lg shadow-blue-200 h-12 text-lg font-bold">
+                                    Review Order <FaTruck className="ml-2"/>
                                 </button>
-                                <p className="text-xs text-gray-400 text-center">
-                                    * Final price may vary if weight discrepancy found during pickup.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Help Box */}
-                        <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 text-orange-800 text-sm flex items-start gap-3">
-                            <FaInfoCircle className="mt-1 flex-shrink-0" size={18} />
-                            <div>
-                                <p className="font-bold">Pickup Time:</p>
-                                <p>Our rider will arrive between <span className="font-bold">4 PM - 7 PM</span> today if booked before 2 PM.</p>
+                                
+                                <div className="flex items-start gap-2 text-xs text-orange-600 bg-orange-50 p-3 rounded-lg">
+                                    <FaInfoCircle className="mt-0.5" />
+                                    <p>Pickup within 24 hours. Price may change if weight varies.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -364,50 +426,43 @@ const AddParcel = () => {
             <Modal
                 isOpen={modalOpen}
                 onRequestClose={() => setModalOpen(false)}
-                className="bg-white max-w-lg w-full mx-auto mt-20 p-0 rounded-2xl shadow-2xl outline-none overflow-hidden"
-                overlayClassName="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-start z-[100] pt-10"
+                className="bg-white max-w-lg w-full mx-auto mt-24 p-0 rounded-2xl shadow-2xl outline-none"
+                overlayClassName="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-start z-[100] pt-10"
             >
-                <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-gray-800">Review Your Order</h2>
-                    <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-red-500">✕</button>
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-xl text-slate-800">Confirm Booking</h3>
+                    <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold">✕</button>
                 </div>
-                
                 <div className="p-6 space-y-4">
-                    {pendingData && calculatedCost && (
-                        <div className="space-y-3">
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Parcel Type</span>
-                                {/* FIX: Add safety check here too just in case */}
-                                <span className="font-medium capitalize">{(pendingData.parcelType || "").replace('-', ' ')}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Weight</span>
-                                <span className="font-medium">{pendingData.parcelWeight} kg</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Sender Region</span>
-                                <span className="font-medium">{pendingData.senderRegion || "N/A"}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Receiver Region</span>
-                                <span className="font-medium">{pendingData.receiverRegion || "N/A"}</span>
-                            </div>
-                            
-                            <div className="bg-blue-50 p-4 rounded-lg flex justify-between items-center mt-4">
-                                <span className="font-bold text-blue-800">Total Payable</span>
-                                <span className="text-2xl font-bold text-blue-600">৳{calculatedCost.amount}</span>
-                            </div>
+                    <p className="text-slate-600 text-sm">Please review the details below. Once confirmed, a rider will be assigned.</p>
+                    
+                    <div className="bg-blue-50 p-5 rounded-xl space-y-3 text-sm border border-blue-100">
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Route</span>
+                            <span className="font-bold text-slate-800">{senderDistrict} → {receiverDistrict}</span>
                         </div>
-                    )}
-                </div>
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Item</span>
+                            <span className="font-bold text-slate-800">{pendingData?.parcelName} ({pendingData?.parcelWeight}kg)</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Receiver</span>
+                            <span className="font-bold text-slate-800">{pendingData?.receiverName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Contact</span>
+                            <span className="font-bold text-slate-800">{pendingData?.receiverContact}</span>
+                        </div>
+                    </div>
 
-                <div className="p-6 bg-gray-50 border-t flex justify-end gap-3">
-                    <button onClick={() => setModalOpen(false)} className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-white transition-colors font-medium">
-                        Edit Details
-                    </button>
-                    <button onClick={confirmSubmit} className="px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-200 transition-colors font-bold flex items-center gap-2">
-                        Confirm Order <FaTruck />
-                    </button>
+                    <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl text-white">
+                        <span className="font-medium">Total Payable</span>
+                        <span className="text-2xl font-extrabold text-[#CAEB66]">৳{calculatedCost.amount}</span>
+                    </div>
+                </div>
+                <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
+                    <button onClick={() => setModalOpen(false)} className="btn btn-ghost text-slate-600">Edit Details</button>
+                    <button onClick={confirmSubmit} className="btn bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200 border-none px-6">Confirm & Book</button>
                 </div>
             </Modal>
         </div>
