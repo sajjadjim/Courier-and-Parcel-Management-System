@@ -3,14 +3,15 @@ import { useForm } from "react-hook-form";
 import { ToastContainer, toast } from "react-toastify";
 import Modal from "react-modal";
 import "react-toastify/dist/ReactToastify.css";
-import { useLoaderData, useNavigate } from "react-router"; 
+import { useNavigate } from "react-router"; 
 import UseAxiosSecure from "../../Hooks/UseAxiosSecure";
 import { AuthContext } from "../../Context/AuthContext";
 import useTrackingLogger from "../../Hooks/useTrackingLogger";
 
 // Icons for professional look
-import { FaBoxOpen, FaWeightHanging, FaMapMarkerAlt, FaUser, FaPhoneAlt, FaFileAlt, FaTruck, FaInfoCircle, FaExclamationTriangle } from "react-icons/fa";
+import { FaBoxOpen, FaWeightHanging, FaMapMarkerAlt, FaTruck, FaInfoCircle, FaExclamationTriangle, FaFileAlt } from "react-icons/fa";
 import { MdLocalShipping } from "react-icons/md";
+import { ImSpinner9 } from "react-icons/im";
 
 Modal.setAppElement("#root");
 
@@ -29,11 +30,12 @@ const Send_Parcel = () => {
     const { logTracking } = useTrackingLogger();
     const navigate = useNavigate();
 
-    // FIX 1: Safely load data. Do not trust useLoaderData to always be an array.
-    const rawData = useLoaderData();
-    const warehouseData = Array.isArray(rawData) ? rawData : [];
+    // --- 1. DATA FETCHING STATE ---
+    const [warehouseData, setWarehouseData] = useState([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [fetchError, setFetchError] = useState(false);
 
-    const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
+    const { register, handleSubmit, watch, setValue } = useForm();
 
     // --- STATES FOR CASCADING DROPDOWNS ---
     const [senderRegion, setSenderRegion] = useState("");
@@ -53,12 +55,35 @@ const Send_Parcel = () => {
     const parcelType = watch("parcelType", "document");
     const parcelWeight = watch("parcelWeight", 0);
 
-    // FIX 2: Defensive check before mapping. If data is empty, return empty array.
+    // --- 2. FETCH DATA FROM GITHUB ---
+    useEffect(() => {
+        fetch('https://raw.githubusercontent.com/sajjadjim/Courier-and-Parcel-Management-System/refs/heads/main/public/warehouses.json')
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch data");
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setWarehouseData(data);
+                } else {
+                    console.error("Data is not an array:", data);
+                    setWarehouseData([]);
+                }
+                setIsLoadingData(false);
+            })
+            .catch(err => {
+                console.error("Error fetching warehouse data:", err);
+                setFetchError(true);
+                setIsLoadingData(false);
+            });
+    }, []);
+
+    // --- 3. GET UNIQUE REGIONS ---
     const uniqueRegions = warehouseData.length > 0 
         ? [...new Set(warehouseData.map(item => item?.region).filter(Boolean))].sort() 
         : [];
 
-    // --- 2. SENDER LOGIC ---
+    // --- 4. SENDER LOGIC ---
     useEffect(() => {
         if (senderRegion && warehouseData.length > 0) {
             const districts = warehouseData
@@ -82,7 +107,7 @@ const Send_Parcel = () => {
         }
     }, [senderDistrict, senderRegion, warehouseData, setValue]);
 
-    // --- 3. RECEIVER LOGIC ---
+    // --- 5. RECEIVER LOGIC ---
     useEffect(() => {
         if (receiverRegion && warehouseData.length > 0) {
             const districts = warehouseData
@@ -106,7 +131,7 @@ const Send_Parcel = () => {
         }
     }, [receiverDistrict, receiverRegion, warehouseData, setValue]);
 
-    // --- 4. COST CALCULATION ---
+    // --- 6. COST CALCULATION ---
     useEffect(() => {
         const w = parseFloat(parcelWeight) || 0;
         const isSameZone = senderRegion && receiverRegion && (senderRegion === receiverRegion);
@@ -129,7 +154,7 @@ const Send_Parcel = () => {
         setCalculatedCost({ amount: Math.round(cost), label });
     }, [parcelType, parcelWeight, senderRegion, receiverRegion]);
 
-    // --- 5. SUBMIT ---
+    // --- 7. SUBMIT ---
     const onSubmit = (data) => {
         setPendingData(data);
         setModalOpen(true);
@@ -179,13 +204,23 @@ const Send_Parcel = () => {
     const labelClass = "block text-xs font-bold text-gray-500 uppercase mb-1";
     const sectionClass = "bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 relative overflow-hidden";
 
-    // FIX 3: Error UI if data failed to load
-    if (warehouseData.length === 0) {
+    // LOADING STATE
+    if (isLoadingData) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500">
+                <ImSpinner9 className="animate-spin text-4xl text-blue-600 mb-4" />
+                <p className="font-semibold">Loading Locations...</p>
+            </div>
+        );
+    }
+
+    // ERROR STATE
+    if (fetchError || warehouseData.length === 0) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500">
                 <FaExclamationTriangle className="text-5xl text-orange-400 mb-4" />
-                <h2 className="text-2xl font-bold text-slate-700">Service Temporarily Unavailable</h2>
-                <p className="text-sm mt-2">We couldn't load the location data. Please check your connection or try again.</p>
+                <h2 className="text-2xl font-bold text-slate-700">Service Unavailable</h2>
+                <p className="text-sm mt-2">Could not load district data from server.</p>
                 <button onClick={() => window.location.reload()} className="mt-6 btn btn-sm btn-outline">Retry</button>
             </div>
         );

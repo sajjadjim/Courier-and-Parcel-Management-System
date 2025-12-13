@@ -1,61 +1,87 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import BangladeshMap from './BangladeshMap';
-import { useLoaderData } from 'react-router';
-import { FaMapMarkedAlt, FaSearch, FaMapMarkerAlt, FaGlobeAsia } from 'react-icons/fa';
+import { FaMapMarkedAlt, FaSearch, FaMapMarkerAlt, FaGlobeAsia, FaExclamationTriangle } from 'react-icons/fa';
+import { ImSpinner9 } from 'react-icons/im';
 
 const Coverage = () => {
     document.title = "Coverage Area | PickOnGo";
-    
-    // FIX 1: Grab data, but don't assume it's perfect yet
-    const loadedData = useLoaderData(); 
-    
-    // FIX 2: Ensure serviceCenters is ALWAYS an array to prevent .map() crashes
-    const serviceCenters = Array.isArray(loadedData) ? loadedData : [];
+
+    // --- 1. STATE MANAGEMENT ---
+    const [serviceCenters, setServiceCenters] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     const [selectedDivision, setSelectedDivision] = useState(''); 
     const [selectedDistrict, setSelectedDistrict] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Debugging: Log this to see what Netlify is actually receiving in the console
+    // --- 2. FETCH DATA FROM GITHUB ---
     useEffect(() => {
-        if (!Array.isArray(loadedData)) {
-            console.error("Data Load Error: serviceCenters is not an array:", loadedData);
-        }
-    }, [loadedData]);
+        fetch('https://raw.githubusercontent.com/sajjadjim/Courier-and-Parcel-Management-System/refs/heads/main/public/warehouses.json')
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch data");
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setServiceCenters(data);
+                } else {
+                    console.error("Data is not an array:", data);
+                    setServiceCenters([]);
+                }
+                setIsLoading(false);
+            })
+            .catch(err => {
+                console.error("Error loading coverage data:", err);
+                setError(true);
+                setIsLoading(false);
+            });
+    }, []);
 
-    // 1. Get Unique Divisions
+    // --- 3. LOGIC: Get Unique Divisions ---
     const divisions = useMemo(() => {
-        // FIX 3: distinct safety check
         if (!serviceCenters || serviceCenters.length === 0) return [];
-        
         const unique = [...new Set(serviceCenters.map(item => item?.region).filter(Boolean))];
         return unique.sort();
     }, [serviceCenters]);
 
-    // 2. Filter Districts based on Division & Search
+    // --- 4. LOGIC: Filter Districts ---
     const filteredDistricts = useMemo(() => {
         if (!selectedDivision) return [];
-        if (!serviceCenters.length) return []; // Safety check
 
         return serviceCenters.filter(center => {
-            // FIX 4: Optional chaining to prevent crashes on missing properties
             const matchesDivision = center?.region === selectedDivision;
             const matchesSearch = center?.district?.toLowerCase().includes(searchTerm.toLowerCase());
             return matchesDivision && matchesSearch;
         });
     }, [serviceCenters, selectedDivision, searchTerm]);
 
-    // FIX 5: Show a fallback UI if data failed to load completely
-    if (!serviceCenters.length && loadedData) {
+
+    // --- 5. LOADING STATE UI ---
+    if (isLoading) {
         return (
-             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500">
-                <FaGlobeAsia className="text-6xl mb-4 text-slate-300" />
-                <h2 className="text-xl font-bold">Unable to load map data.</h2>
-                <p>Please check your internet connection or try again later.</p>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 font-sans">
+                <ImSpinner9 className="animate-spin text-4xl text-blue-600 mb-4" />
+                <p className="font-semibold text-lg">Loading Map Data...</p>
             </div>
         );
     }
 
+    // --- 6. ERROR STATE UI ---
+    if (error || serviceCenters.length === 0) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 font-sans">
+                <FaExclamationTriangle className="text-5xl text-orange-400 mb-4" />
+                <h2 className="text-2xl font-bold text-slate-700">Map Unavailable</h2>
+                <p className="text-sm mt-2">We couldn't load the coverage map data.</p>
+                <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-white border border-gray-300 rounded-full hover:bg-gray-100 transition-colors font-medium text-sm">
+                    Retry Connection
+                </button>
+            </div>
+        );
+    }
+
+    // --- 7. MAIN UI ---
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
             
@@ -83,7 +109,7 @@ const Coverage = () => {
                     {/* Filters Header */}
                     <div className="p-5 border-b border-gray-100 bg-gray-50 space-y-3">
                         
-                        {/* Division Dropdown */}
+                        {/* Division Dropdown (Primary Action) */}
                         <div className="relative">
                             <FaGlobeAsia className="absolute left-3.5 top-3 text-gray-500 z-10" />
                             <select
@@ -91,7 +117,7 @@ const Coverage = () => {
                                 value={selectedDivision}
                                 onChange={(e) => {
                                     setSelectedDivision(e.target.value);
-                                    setSelectedDistrict(null);
+                                    setSelectedDistrict(null); // Reset map zoom when division changes
                                 }}
                             >
                                 <option value="" disabled>Select a Division</option>
@@ -104,7 +130,7 @@ const Coverage = () => {
                             <div className="absolute right-3 top-3.5 pointer-events-none text-gray-400 text-xs">▼</div>
                         </div>
 
-                        {/* Search Input */}
+                        {/* Search Input (Only enabled if division selected) */}
                         <div className={`relative transition-opacity duration-300 ${!selectedDivision ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                             <input
                                 type="text"
@@ -121,17 +147,20 @@ const Coverage = () => {
                     {/* District List Area */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar bg-slate-50/30">
                         {!selectedDivision ? (
+                            // INITIAL STATE: Prompt user to select division
                             <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-400">
                                 <FaGlobeAsia className="text-4xl mb-3 text-gray-300" />
                                 <p className="font-semibold text-gray-600">No Division Selected</p>
-                                <p className="text-xs mt-1">Please select a division from the dropdown above.</p>
+                                <p className="text-xs mt-1">Please select a division from the dropdown above to view available districts.</p>
                             </div>
                         ) : filteredDistricts.length === 0 ? (
+                            // EMPTY SEARCH STATE
                             <div className="text-center py-12 flex flex-col items-center text-gray-400">
                                 <FaSearch className="text-3xl mb-2 opacity-20" />
                                 <p className="text-sm">No districts found matching "{searchTerm}".</p>
                             </div>
                         ) : (
+                            // LIST STATE
                             filteredDistricts.map((center, idx) => (
                                 <button
                                     key={idx}
@@ -196,7 +225,7 @@ const Coverage = () => {
                                     <span key={i} className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded border border-slate-200">
                                         {area}
                                     </span>
-                                )) || <span>No specific zones listed</span>}
+                                )) || <span className="text-xs text-gray-400">No specific zones listed</span>}
                             </div>
                         </div>
                     )}
