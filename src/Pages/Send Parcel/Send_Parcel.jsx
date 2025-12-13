@@ -9,7 +9,7 @@ import { AuthContext } from "../../Context/AuthContext";
 import useTrackingLogger from "../../Hooks/useTrackingLogger";
 
 // Icons for professional look
-import { FaBoxOpen, FaWeightHanging, FaMapMarkerAlt, FaUser, FaPhoneAlt, FaFileAlt, FaTruck, FaInfoCircle } from "react-icons/fa";
+import { FaBoxOpen, FaWeightHanging, FaMapMarkerAlt, FaUser, FaPhoneAlt, FaFileAlt, FaTruck, FaInfoCircle, FaExclamationTriangle } from "react-icons/fa";
 import { MdLocalShipping } from "react-icons/md";
 
 Modal.setAppElement("#root");
@@ -26,66 +26,65 @@ const Send_Parcel = () => {
 
     const { user } = useContext(AuthContext);
     const axiosSecure = UseAxiosSecure();
-    const warehouseData = useLoaderData(); // The JSON data you provided
     const { logTracking } = useTrackingLogger();
     const navigate = useNavigate();
+
+    // FIX 1: Safely load data. Do not trust useLoaderData to always be an array.
+    const rawData = useLoaderData();
+    const warehouseData = Array.isArray(rawData) ? rawData : [];
 
     const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
 
     // --- STATES FOR CASCADING DROPDOWNS ---
-    // Sender States
     const [senderRegion, setSenderRegion] = useState("");
     const [senderDistricts, setSenderDistricts] = useState([]);
     const [senderDistrict, setSenderDistrict] = useState("");
     const [senderAreas, setSenderAreas] = useState([]);
 
-    // Receiver States
     const [receiverRegion, setReceiverRegion] = useState("");
     const [receiverDistricts, setReceiverDistricts] = useState([]);
     const [receiverDistrict, setReceiverDistrict] = useState("");
     const [receiverAreas, setReceiverAreas] = useState([]);
 
-    // UI States
     const [modalOpen, setModalOpen] = useState(false);
     const [pendingData, setPendingData] = useState(null);
     const [calculatedCost, setCalculatedCost] = useState({ amount: 0, label: "Calculating..." });
 
-    // Live Watch
     const parcelType = watch("parcelType", "document");
     const parcelWeight = watch("parcelWeight", 0);
 
-    // --- 1. INITIALIZE REGIONS ---
-    const uniqueRegions = [...new Set(warehouseData.map(item => item.region))].sort();
+    // FIX 2: Defensive check before mapping. If data is empty, return empty array.
+    const uniqueRegions = warehouseData.length > 0 
+        ? [...new Set(warehouseData.map(item => item?.region).filter(Boolean))].sort() 
+        : [];
 
     // --- 2. SENDER LOGIC ---
     useEffect(() => {
-        if (senderRegion) {
-            // Filter districts based on selected Region
+        if (senderRegion && warehouseData.length > 0) {
             const districts = warehouseData
                 .filter(item => item.region === senderRegion)
                 .map(item => item.district);
             setSenderDistricts([...new Set(districts)].sort());
-            setSenderDistrict(""); // Reset district
-            setSenderAreas([]);    // Reset areas
-            setValue("senderCity", ""); // Reset form value
-            setValue("senderWarehouse", ""); // Reset form value
+            setSenderDistrict(""); 
+            setSenderAreas([]);    
+            setValue("senderCity", ""); 
+            setValue("senderWarehouse", ""); 
         }
     }, [senderRegion, warehouseData, setValue]);
 
     useEffect(() => {
-        if (senderDistrict) {
-            // Find specific object to get covered areas
+        if (senderDistrict && warehouseData.length > 0) {
             const target = warehouseData.find(item => 
                 item.region === senderRegion && item.district === senderDistrict
             );
             setSenderAreas(target ? target.covered_area.sort() : []);
-            setValue("senderWarehouse", ""); // Reset area form value
+            setValue("senderWarehouse", ""); 
         }
     }, [senderDistrict, senderRegion, warehouseData, setValue]);
 
     // --- 3. RECEIVER LOGIC ---
     useEffect(() => {
-        if (receiverRegion) {
+        if (receiverRegion && warehouseData.length > 0) {
             const districts = warehouseData
                 .filter(item => item.region === receiverRegion)
                 .map(item => item.district);
@@ -98,7 +97,7 @@ const Send_Parcel = () => {
     }, [receiverRegion, warehouseData, setValue]);
 
     useEffect(() => {
-        if (receiverDistrict) {
+        if (receiverDistrict && warehouseData.length > 0) {
             const target = warehouseData.find(item => 
                 item.region === receiverRegion && item.district === receiverDistrict
             );
@@ -110,7 +109,6 @@ const Send_Parcel = () => {
     // --- 4. COST CALCULATION ---
     useEffect(() => {
         const w = parseFloat(parcelWeight) || 0;
-        // Cost Logic: Same Region = Cheap, Different Region = Expensive
         const isSameZone = senderRegion && receiverRegion && (senderRegion === receiverRegion);
 
         let cost = 0;
@@ -120,12 +118,10 @@ const Send_Parcel = () => {
             cost = isSameZone ? 60 : 100;
             label = isSameZone ? "Same Region (Document)" : "Inter-Region (Document)";
         } else {
-            // Parcel Logic
             const baseRate = isSameZone ? 60 : 120;
             if (w <= 1) {
                 cost = baseRate;
             } else {
-                // Base for 1kg + 50tk per extra kg
                 cost = baseRate + ((w - 1) * 50);
             }
             label = isSameZone ? "Same Region (Parcel)" : "Inter-Region (Parcel)";
@@ -145,14 +141,13 @@ const Send_Parcel = () => {
 
         const parcelData = {
             ...pendingData,
-            email: user.email,
-            payment_status: 'unpaid', // Assuming online payment simulation
+            email: user?.email,
+            payment_status: 'unpaid',
             parcelWeight: weight,
             deliveryCharge: calculatedCost,
             trackingId: trackingId,
             date: new Date().toISOString().split("T")[0],
             delivery_status: 'pending',
-            // Explicitly saving structure for tracking
             senderRegion: senderRegion,
             senderCity: senderDistrict, 
             receiverRegion: receiverRegion,
@@ -166,8 +161,8 @@ const Send_Parcel = () => {
                     await logTracking({
                         trackingId: parcelData.trackingId,
                         status: "parcel_created",
-                        details: `Created by ${user.displayName}`,
-                        updated_by: user.email,
+                        details: `Created by ${user?.displayName}`,
+                        updated_by: user?.email,
                     });
                     setTimeout(() => navigate("/dashboard/myParcels"), 1500);
                 }
@@ -180,10 +175,21 @@ const Send_Parcel = () => {
         setModalOpen(false);
     };
 
-    // --- STYLES ---
     const inputClass = "w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm text-gray-700 bg-white";
     const labelClass = "block text-xs font-bold text-gray-500 uppercase mb-1";
     const sectionClass = "bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 relative overflow-hidden";
+
+    // FIX 3: Error UI if data failed to load
+    if (warehouseData.length === 0) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500">
+                <FaExclamationTriangle className="text-5xl text-orange-400 mb-4" />
+                <h2 className="text-2xl font-bold text-slate-700">Service Temporarily Unavailable</h2>
+                <p className="text-sm mt-2">We couldn't load the location data. Please check your connection or try again.</p>
+                <button onClick={() => window.location.reload()} className="mt-6 btn btn-sm btn-outline">Retry</button>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 py-10 px-4 md:px-8 font-sans">
