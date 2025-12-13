@@ -1,6 +1,6 @@
 # 📦 PickOn - Smart Courier & Parcel Management System
 
-![Project Banner](https://via.placeholder.com/1200x400?text=PickOn+Courier+Service+Dashboard)
+![Project Banner](https://github.com/sajjadjim/Courier-and-Parcel-Management-System/blob/main/Banner_image_pickon.png?raw=true)
 
 **PickOn** is a modern, full-stack logistics platform designed to streamline parcel booking, delivery tracking, and rider management. It connects Merchants, Customers, and Delivery Riders in a seamless ecosystem with real-time updates and interactive maps.
 
