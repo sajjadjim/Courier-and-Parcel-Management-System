@@ -1,33 +1,60 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import BangladeshMap from './BangladeshMap';
 import { useLoaderData } from 'react-router';
-import { FaMapMarkedAlt, FaSearch, FaMapMarkerAlt, FaGlobeAsia, FaArrowLeft } from 'react-icons/fa';
+import { FaMapMarkedAlt, FaSearch, FaMapMarkerAlt, FaGlobeAsia } from 'react-icons/fa';
 
 const Coverage = () => {
-
     document.title = "Coverage Area | PickOnGo";
-    const serviceCenters = useLoaderData(); 
-    const [selectedDivision, setSelectedDivision] = useState(''); // Default is empty
+    
+    // FIX 1: Grab data, but don't assume it's perfect yet
+    const loadedData = useLoaderData(); 
+    
+    // FIX 2: Ensure serviceCenters is ALWAYS an array to prevent .map() crashes
+    const serviceCenters = Array.isArray(loadedData) ? loadedData : [];
+
+    const [selectedDivision, setSelectedDivision] = useState(''); 
     const [selectedDistrict, setSelectedDistrict] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Debugging: Log this to see what Netlify is actually receiving in the console
+    useEffect(() => {
+        if (!Array.isArray(loadedData)) {
+            console.error("Data Load Error: serviceCenters is not an array:", loadedData);
+        }
+    }, [loadedData]);
+
     // 1. Get Unique Divisions
     const divisions = useMemo(() => {
-        const unique = [...new Set(serviceCenters.map(item => item.region))];
+        // FIX 3: distinct safety check
+        if (!serviceCenters || serviceCenters.length === 0) return [];
+        
+        const unique = [...new Set(serviceCenters.map(item => item?.region).filter(Boolean))];
         return unique.sort();
     }, [serviceCenters]);
 
     // 2. Filter Districts based on Division & Search
     const filteredDistricts = useMemo(() => {
-        // REQUIREMENT: If no division is selected, show nothing
         if (!selectedDivision) return [];
+        if (!serviceCenters.length) return []; // Safety check
 
         return serviceCenters.filter(center => {
-            const matchesDivision = center.region === selectedDivision;
-            const matchesSearch = center.district.toLowerCase().includes(searchTerm.toLowerCase());
+            // FIX 4: Optional chaining to prevent crashes on missing properties
+            const matchesDivision = center?.region === selectedDivision;
+            const matchesSearch = center?.district?.toLowerCase().includes(searchTerm.toLowerCase());
             return matchesDivision && matchesSearch;
         });
     }, [serviceCenters, selectedDivision, searchTerm]);
+
+    // FIX 5: Show a fallback UI if data failed to load completely
+    if (!serviceCenters.length && loadedData) {
+        return (
+             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500">
+                <FaGlobeAsia className="text-6xl mb-4 text-slate-300" />
+                <h2 className="text-xl font-bold">Unable to load map data.</h2>
+                <p>Please check your internet connection or try again later.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -56,7 +83,7 @@ const Coverage = () => {
                     {/* Filters Header */}
                     <div className="p-5 border-b border-gray-100 bg-gray-50 space-y-3">
                         
-                        {/* Division Dropdown (Primary Action) */}
+                        {/* Division Dropdown */}
                         <div className="relative">
                             <FaGlobeAsia className="absolute left-3.5 top-3 text-gray-500 z-10" />
                             <select
@@ -64,7 +91,7 @@ const Coverage = () => {
                                 value={selectedDivision}
                                 onChange={(e) => {
                                     setSelectedDivision(e.target.value);
-                                    setSelectedDistrict(null); // Reset map zoom when division changes
+                                    setSelectedDistrict(null);
                                 }}
                             >
                                 <option value="" disabled>Select a Division</option>
@@ -77,7 +104,7 @@ const Coverage = () => {
                             <div className="absolute right-3 top-3.5 pointer-events-none text-gray-400 text-xs">▼</div>
                         </div>
 
-                        {/* Search Input (Only enabled if division selected) */}
+                        {/* Search Input */}
                         <div className={`relative transition-opacity duration-300 ${!selectedDivision ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                             <input
                                 type="text"
@@ -94,20 +121,17 @@ const Coverage = () => {
                     {/* District List Area */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar bg-slate-50/30">
                         {!selectedDivision ? (
-                            // INITIAL STATE: Prompt user to select division
                             <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-400">
                                 <FaGlobeAsia className="text-4xl mb-3 text-gray-300" />
                                 <p className="font-semibold text-gray-600">No Division Selected</p>
-                                <p className="text-xs mt-1">Please select a division from the dropdown above to view available districts.</p>
+                                <p className="text-xs mt-1">Please select a division from the dropdown above.</p>
                             </div>
                         ) : filteredDistricts.length === 0 ? (
-                            // EMPTY SEARCH STATE
                             <div className="text-center py-12 flex flex-col items-center text-gray-400">
                                 <FaSearch className="text-3xl mb-2 opacity-20" />
                                 <p className="text-sm">No districts found matching "{searchTerm}".</p>
                             </div>
                         ) : (
-                            // LIST STATE
                             filteredDistricts.map((center, idx) => (
                                 <button
                                     key={idx}
@@ -122,7 +146,7 @@ const Coverage = () => {
                                             {center.district}
                                         </h3>
                                         <p className={`text-[10px] uppercase font-semibold tracking-wide ${selectedDistrict?.district === center.district ? "text-blue-200" : "text-gray-400"}`}>
-                                            {center.covered_area.length} Areas Covered
+                                            {center?.covered_area?.length || 0} Areas Covered
                                         </p>
                                     </div>
                                     <div className={`p-2 rounded-full ${selectedDistrict?.district === center.district ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500"}`}>
@@ -168,11 +192,11 @@ const Coverage = () => {
                             
                             <p className="text-xs text-gray-500 font-bold uppercase mb-2">Covered Zones:</p>
                             <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
-                                {selectedDistrict.covered_area.map((area, i) => (
+                                {selectedDistrict?.covered_area?.map((area, i) => (
                                     <span key={i} className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded border border-slate-200">
                                         {area}
                                     </span>
-                                ))}
+                                )) || <span>No specific zones listed</span>}
                             </div>
                         </div>
                     )}
