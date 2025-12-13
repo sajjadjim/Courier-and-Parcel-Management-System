@@ -86,7 +86,7 @@ const Coverage = () => {
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
             
             {/* Header Section */}
-            <div className="bg-slate-900 text-white py-10 px-6 text-center shadow-lg relative overflow-hidden">
+            <div className="bg-slate-900 text-white py-25 px-6 text-center shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#CAEB66] rounded-full blur-[100px] opacity-10 translate-y-1/2 -translate-x-1/2"></div>
 
